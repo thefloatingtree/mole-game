@@ -1,5 +1,5 @@
 import type { IScene } from "./IScene";
-import { Pinput } from "./util/pinput";
+import { Pinput } from "./util/Pinput";
 
 export class Game {
   static #instance: Game | null = null;
