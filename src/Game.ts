@@ -69,7 +69,7 @@ export class Game {
       if (this.#currentScene) {
         this.#pinput.update();
         this.#currentScene.update(deltaTime);
-        this.#currentScene.draw(this.context);
+        this.#currentScene.draw(this.context, deltaTime);
       }
       this.loop();
     });
