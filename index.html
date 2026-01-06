@@ -15,13 +15,16 @@
         display: flex;
         justify-content: center;
         align-items: center;
+        overflow: hidden;
       }
 
       canvas {
         width: 100%;
-        height: auto;
+        height: 100%;
         display: block;
         image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        object-fit: contain;
       }
     </style>
   </head>
