@@ -10,6 +10,9 @@ export class Game {
   #lastFrameTime: number = 0;
   #pinput = new Pinput();
 
+  public camera = { x: 0, y: 0, xOffset: 0, yOffset: 0, width: 0, height: 0 };
+  public frameCounter = 0;
+
   constructor() {}
 
   public static get instance(): Game {
@@ -41,6 +44,9 @@ export class Game {
   init(context: CanvasRenderingContext2D) {
     this.#context = context;
     this.#context.imageSmoothingEnabled = false;
+
+    this.camera.width = context.canvas.width;
+    this.camera.height = context.canvas.height;
   }
 
   loadScene(scene: IScene | null) {
@@ -62,8 +68,13 @@ export class Game {
   loop() {
     requestAnimationFrame((currentTime: number) => {
       if (!this.#isRunning) return;
-      
-      const deltaTime = currentTime - this.#lastFrameTime;
+
+      this.frameCounter++;
+
+      let deltaTime = currentTime - this.#lastFrameTime;
+      // constrain deltaTime to a maximum of 100ms to avoid large jumps
+      if (deltaTime > 100) deltaTime = 100;
+
       this.#lastFrameTime = currentTime;
 
       if (this.#currentScene) {
