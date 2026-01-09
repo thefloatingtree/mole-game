@@ -38,6 +38,12 @@ export function drawText(
             frameIndex = 39; // Question mark character
         } else if (char === '!') {
             frameIndex = 40; // Exclamation mark character
+        } else if (char === '+') {
+            frameIndex = 41; // Plus sign character
+        } else if (char === '-') {
+            frameIndex = 42; // Hyphen character
+        } else if (char === ':') {
+            frameIndex = 43; // Colon character
         } else {
             continue; // Skip unsupported characters
         }

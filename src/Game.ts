@@ -1,3 +1,5 @@
+import { Animator } from "./Animator";
+import { Events } from "./Events";
 import type { IScene } from "./IScene";
 import { Pinput } from "./util/Pinput";
 
@@ -9,6 +11,8 @@ export class Game {
   #isRunning: boolean = false;
   #lastFrameTime: number = 0;
   #pinput = new Pinput();
+  #animator = new Animator();
+  #events = new Events();
 
   public camera = { x: 0, y: 0, xOffset: 0, yOffset: 0, width: 0, height: 0 };
   public frameCounter = 0;
@@ -39,6 +43,14 @@ export class Game {
 
   public get input(): Pinput {
     return this.#pinput;
+  }
+
+  public get animator(): Animator {
+    return this.#animator;
+  }
+
+  public get events(): Events {
+    return this.#events;
   }
 
   init(context: CanvasRenderingContext2D) {
@@ -79,6 +91,7 @@ export class Game {
 
       if (this.#currentScene) {
         this.#pinput.update();
+        this.#animator.update(deltaTime);
         this.#currentScene.update(deltaTime);
         this.#currentScene.draw(this.context, deltaTime);
       }

@@ -13,6 +13,7 @@ export abstract class Entity {
     };
   }
 
+  init?(): void | Promise<void>;
   abstract update(deltaTime: number): void;
   abstract draw(context: CanvasRenderingContext2D, deltaTime: number): void;
 }

@@ -1,10 +1,12 @@
+import { Easing } from "../../Animator";
 import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
-import { drawText } from "../../util/text";
+import { drawText } from "../../util/drawText";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
+import { Log } from "./Log";
 import { MineScenePlayer } from "./MineScenePlayer";
 
 type Level = {
@@ -22,7 +24,7 @@ export class MineScene implements IScene {
 
   #cameraVelocity = { x: 0, y: 0 };
   #cameraTarget = { x: 0, y: 0 };
-  
+
   public cameraShakeIntensity = 0;
 
   public playerSprite: Sprite | null = null;
@@ -30,8 +32,11 @@ export class MineScene implements IScene {
   public iconSprite: Sprite | null = null;
   public fontSprite: Sprite | null = null;
 
+  public textPosition = { x: 10, y: 10 };
+
   playerEntity = new MineScenePlayer(this);
   blocks: Block[] = [];
+  log: Log | null = null;
 
   async load() {
     this.playerSprite = await Sprite.load(
@@ -69,6 +74,9 @@ export class MineScene implements IScene {
       if (blockType === BlockType.AIR) continue;
       this.blocks.push(new Block(this, { x, y }, blockType));
     }
+
+    this.log = new Log({ x: 8, y: 165 }, this.fontSprite!);
+    this.log.init();
   }
 
   performShakeCamera() {
@@ -131,6 +139,7 @@ export class MineScene implements IScene {
 
   update(deltaTime: number): void {
     this.playerEntity.update(deltaTime);
+    this.log?.update(deltaTime);
 
     for (const block of this.blocks) {
       block.update(deltaTime);
@@ -151,6 +160,28 @@ export class MineScene implements IScene {
     } else if (Game.instance.input.isDown("arrowup")) {
       Game.instance.camera.y -= 0.1 * deltaTime;
     }
+
+    if (Game.instance.input.isPressed("t")) {
+      if (this.textPosition.x === 10) {
+        Game.instance.animator.animate({
+          target: this.textPosition,
+          key: "x",
+          to: 200,
+          from: this.textPosition.x,
+          easing: Easing.easeInOutCubic,
+          duration: 1000,
+        });
+      } else {
+        Game.instance.animator.animate({
+          target: this.textPosition,
+          key: "x",
+          to: 10,
+          from: this.textPosition.x,
+          easing: Easing.easeInOutCubic,
+          duration: 1000,
+        });
+      }
+    }
   }
 
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {
@@ -161,12 +192,12 @@ export class MineScene implements IScene {
     context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 
     this.playerEntity.draw(context, deltaTime);
-
+    
     for (const block of this.blocks) {
       block.draw(context);
     }
 
-    drawText(context, this.fontSprite!, "The quick brown, fox jumps over the lazy dog.,?!\n1234567890", 10, 10);
+    this.log?.draw(context, deltaTime);
   }
 
   destroy(): void {}

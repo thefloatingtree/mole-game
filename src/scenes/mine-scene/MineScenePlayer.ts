@@ -75,6 +75,8 @@ export class MineScenePlayer extends Entity {
     } else {
       this.inventory.set(itemType, { type: itemType, quantity });
     }
+
+    Game.instance.events.dispatch("log-message", `+${quantity} ${itemType}`);
   }
 
   resolveCollisionWithEnvironment(): void {
