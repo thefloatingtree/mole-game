@@ -5,6 +5,8 @@ import { ItemType } from "./constants/ItemType";
 import type { MineScene } from "./MineScene";
 
 export class Block extends Entity {
+  readonly gravity = 0.005;
+
   private id = crypto.randomUUID();
 
   private durabilityLookup: Record<BlockType, number> = {
@@ -193,7 +195,7 @@ export class Block extends Entity {
 
     // Apply gravity to stone blocks
     if (this.shouldApplyGravity) {
-      this.velocity.y += 0.015; // Gravity acceleration
+      this.velocity.y += this.gravity * deltaTime; // Gravity acceleration
       this.position.y += this.velocity.y;
 
       this.resolveCollisionWithEnvironment();
