@@ -2,6 +2,7 @@ import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
+import { drawText } from "../../util/text";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
 import { MineScenePlayer } from "./MineScenePlayer";
@@ -27,6 +28,7 @@ export class MineScene implements IScene {
   public playerSprite: Sprite | null = null;
   public environmentSprite: Sprite | null = null;
   public iconSprite: Sprite | null = null;
+  public fontSprite: Sprite | null = null;
 
   playerEntity = new MineScenePlayer(this);
   blocks: Block[] = [];
@@ -43,6 +45,10 @@ export class MineScene implements IScene {
     this.iconSprite = await Sprite.load(
       new URL("/assets/sprites/icon-sprite.png", import.meta.url).href,
       new URL("/assets/sprites/icon-sprite.json", import.meta.url).href
+    );
+    this.fontSprite = await Sprite.load(
+      new URL("/assets/sprites/font-sprite.png", import.meta.url).href,
+      new URL("/assets/sprites/font-sprite.json", import.meta.url).href
     );
 
     // Load level data
@@ -159,6 +165,8 @@ export class MineScene implements IScene {
     for (const block of this.blocks) {
       block.draw(context);
     }
+
+    drawText(context, this.fontSprite!, "The quick brown, fox jumps over the lazy dog.,?!\n1234567890", 10, 10);
   }
 
   destroy(): void {}

@@ -10,8 +10,21 @@ export class Block extends Entity {
   private durabilityLookup: Record<BlockType, number> = {
     [BlockType.PLAYER_START]: 0,
     [BlockType.AIR]: 0,
-    [BlockType.DIRT]: 3,
-    [BlockType.STONE]: 10,
+    [BlockType.DIRT]: 6,
+    [BlockType.STONE]: 20,
+    [BlockType.COAL_ORE]: 6,
+    [BlockType.IRON_ORE]: 9,
+    [BlockType.EMERALD_ORE]: 12,
+    [BlockType.DIAMOND_ORE]: 18,
+    [BlockType.BEDROCK1]: Infinity,
+    [BlockType.BEDROCK2]: Infinity,
+    [BlockType.BEDROCK3]: Infinity,
+    [BlockType.BEDROCK4]: Infinity,
+    [BlockType.BEDROCK5]: Infinity,
+    [BlockType.BEDROCK6]: Infinity,
+    [BlockType.BEDROCK7]: Infinity,
+    [BlockType.BEDROCK8]: Infinity,
+    [BlockType.BEDROCK9]: Infinity,
   };
   private dropLookup: Record<
     BlockType,
@@ -27,6 +40,31 @@ export class Block extends Entity {
       quantity: 1,
     },
     [BlockType.STONE]: null,
+    [BlockType.COAL_ORE]: {
+      type: ItemType.COAL,
+      quantity: 1,
+    },
+    [BlockType.IRON_ORE]: {
+      type: ItemType.IRON,
+      quantity: 1,
+    },
+    [BlockType.EMERALD_ORE]: {
+      type: ItemType.EMERALD,
+      quantity: 1,
+    },
+    [BlockType.DIAMOND_ORE]: {
+      type: ItemType.DIAMOND,
+      quantity: 1,
+    },
+    [BlockType.BEDROCK1]: null,
+    [BlockType.BEDROCK2]: null,
+    [BlockType.BEDROCK3]: null,
+    [BlockType.BEDROCK4]: null,
+    [BlockType.BEDROCK5]: null,
+    [BlockType.BEDROCK6]: null,
+    [BlockType.BEDROCK7]: null,
+    [BlockType.BEDROCK8]: null,
+    [BlockType.BEDROCK9]: null,
   };
   private get maxDurability() {
     return this.durabilityLookup[this.type];
@@ -34,6 +72,7 @@ export class Block extends Entity {
 
   public durability: number;
   public shouldDestroy = false;
+  public isInteractable = true;
   public isSelected = false;
   public isBeingMined = false;
   public isAirborne = false;
@@ -50,6 +89,10 @@ export class Block extends Entity {
 
     this.durability = this.maxDurability;
     this.shouldApplyGravity = this.type === BlockType.STONE;
+
+    if (this.type >= BlockType.BEDROCK1 && this.type <= BlockType.BEDROCK9) {
+      this.isInteractable = false;
+    }
   }
 
   public get collisionBox() {
@@ -67,6 +110,7 @@ export class Block extends Entity {
     type: ItemType;
     quantity: number;
   } | null {
+    if (!this.isInteractable || this.shouldDestroy) return null;
     this.durability -= amount;
     if (this.durability <= 0) {
       this.shouldDestroy = true;
@@ -107,6 +151,7 @@ export class Block extends Entity {
 
   // If a dirt block is is above an empty space and has no blocks to the sides, apply gravity
   attemptToShakeLoose() {
+    if (!this.isInteractable) return;
     if (this.type !== BlockType.DIRT) return;
 
     const belowBlock = this.scene.blocks.find(
@@ -137,10 +182,14 @@ export class Block extends Entity {
   }
 
   update(deltaTime: number): void {
-    this.isSelected = checkCollisionAABB(
-      this.collisionBox,
-      this.scene.playerEntity.selectionCollisionBox
-    );
+    if (!this.isInteractable) return;
+
+    this.isSelected =
+      !this.scene.playerEntity.isAirborne &&
+      checkCollisionAABB(
+        this.collisionBox,
+        this.scene.playerEntity.selectionCollisionBox
+      );
 
     // Apply gravity to stone blocks
     if (this.shouldApplyGravity) {
@@ -160,6 +209,8 @@ export class Block extends Entity {
       this.cameraPosition.x,
       this.cameraPosition.y
     );
+
+    if (!this.isInteractable) return;
 
     const durabilityPercentage = this.durability / this.maxDurability;
     let durabilitySprite = null;
@@ -186,7 +237,6 @@ export class Block extends Entity {
       );
     }
 
-    // TODO: Replace with pickaxe animation
     if (this.isSelected && !this.isBeingMined) {
       this.scene.iconSprite?.drawFrame(
         context,

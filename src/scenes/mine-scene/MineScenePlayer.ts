@@ -51,7 +51,7 @@ export class MineScenePlayer extends Entity {
     if (this.mineDirection === "up") {
       return {
         x: this.position.x + 8,
-        y: this.position.y - 32,
+        y: this.position.y - 24,
         width: 1,
         height: 16,
       };
@@ -212,12 +212,12 @@ export class MineScenePlayer extends Entity {
 
     // Debug: Draw selection box
 
-    context.strokeStyle = "red";
-    context.strokeRect(
-      this.selectionCollisionBox.x - Game.instance.camera.x,
-      this.selectionCollisionBox.y - Game.instance.camera.y,
-      this.selectionCollisionBox.width,
-      this.selectionCollisionBox.height
-    );
+    // context.strokeStyle = "red";
+    // context.strokeRect(
+    //   this.selectionCollisionBox.x - Game.instance.camera.x,
+    //   this.selectionCollisionBox.y - Game.instance.camera.y,
+    //   this.selectionCollisionBox.width,
+    //   this.selectionCollisionBox.height
+    // );
   }
 }

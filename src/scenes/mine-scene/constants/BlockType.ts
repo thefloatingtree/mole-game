@@ -3,5 +3,18 @@ export const BlockType = {
     AIR: 0,
     DIRT: 1,
     STONE: 2,
+    COAL_ORE: 3,
+    IRON_ORE: 4,
+    EMERALD_ORE: 5,
+    DIAMOND_ORE: 6,
+    BEDROCK1: 11,
+    BEDROCK2: 12,
+    BEDROCK3: 13,
+    BEDROCK4: 14,
+    BEDROCK5: 15,
+    BEDROCK6: 16,
+    BEDROCK7: 17,
+    BEDROCK8: 18,
+    BEDROCK9: 19,
 } as const;
 export type BlockType = typeof BlockType[keyof typeof BlockType];
