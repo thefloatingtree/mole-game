@@ -1,9 +1,9 @@
-import { Easing } from "../../Animator";
 import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
-import { drawText } from "../../util/drawText";
+import { DeathScene } from "../death-scene/DeathScene";
+import { MainMenuScene } from "../main-menu-scene/MainMenuScene";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
 import { Log } from "./Log";
@@ -30,9 +30,7 @@ export class MineScene implements IScene {
   public playerSprite: Sprite | null = null;
   public environmentSprite: Sprite | null = null;
   public iconSprite: Sprite | null = null;
-  public fontSprite: Sprite | null = null;
-
-  public textPosition = { x: 10, y: 10 };
+  public transitionsSprite: Sprite | null = null;
 
   playerEntity = new MineScenePlayer(this);
   blocks: Block[] = [];
@@ -51,9 +49,9 @@ export class MineScene implements IScene {
       new URL("/assets/sprites/icon-sprite.png", import.meta.url).href,
       new URL("/assets/sprites/icon-sprite.json", import.meta.url).href
     );
-    this.fontSprite = await Sprite.load(
-      new URL("/assets/sprites/font-sprite.png", import.meta.url).href,
-      new URL("/assets/sprites/font-sprite.json", import.meta.url).href
+    this.transitionsSprite = await Sprite.load(
+      new URL("/assets/sprites/transitions-sprite.png", import.meta.url).href,
+      new URL("/assets/sprites/transitions-sprite.json", import.meta.url).href
     );
 
     // Load level data
@@ -75,8 +73,14 @@ export class MineScene implements IScene {
       this.blocks.push(new Block(this, { x, y }, blockType));
     }
 
-    this.log = new Log({ x: 8, y: 165 }, this.fontSprite!);
+    this.log = new Log({ x: 8, y: 165 });
     this.log.init();
+
+    Game.instance.events.subscribe("player-death", () => {
+      setTimeout(() => {
+        Game.instance.switchScene(new DeathScene());
+      }, 1000);
+    });
   }
 
   performShakeCamera() {
@@ -151,36 +155,8 @@ export class MineScene implements IScene {
       }
     }
 
-    if (Game.instance.input.isDown("arrowright")) {
-      Game.instance.camera.x += 0.1 * deltaTime;
-    } else if (Game.instance.input.isDown("arrowleft")) {
-      Game.instance.camera.x -= 0.1 * deltaTime;
-    } else if (Game.instance.input.isDown("arrowdown")) {
-      Game.instance.camera.y += 0.1 * deltaTime;
-    } else if (Game.instance.input.isDown("arrowup")) {
-      Game.instance.camera.y -= 0.1 * deltaTime;
-    }
-
     if (Game.instance.input.isPressed("t")) {
-      if (this.textPosition.x === 10) {
-        Game.instance.animator.animate({
-          target: this.textPosition,
-          key: "x",
-          to: 200,
-          from: this.textPosition.x,
-          easing: Easing.easeInOutCubic,
-          duration: 1000,
-        });
-      } else {
-        Game.instance.animator.animate({
-          target: this.textPosition,
-          key: "x",
-          to: 10,
-          from: this.textPosition.x,
-          easing: Easing.easeInOutCubic,
-          duration: 1000,
-        });
-      }
+      Game.instance.switchScene(new MainMenuScene());
     }
   }
 
@@ -192,12 +168,24 @@ export class MineScene implements IScene {
     context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 
     this.playerEntity.draw(context, deltaTime);
-    
+
     for (const block of this.blocks) {
       block.draw(context);
     }
 
     this.log?.draw(context, deltaTime);
+
+    this.transitionsSprite?.drawTiledAnimation(
+      context,
+      "FadeIn",
+      0,
+      0,
+      40,
+      24,
+      deltaTime,
+      false,
+      1.25
+    );
   }
 
   destroy(): void {}

@@ -50,6 +50,18 @@ export class Sprite {
     return new Sprite(spriteImage, spriteData);
   }
 
+  public get height(): number {
+    // Assuming all frames have the same height, return the height of the first frame
+    const firstFrameKey = Object.keys(this.spriteData.frames)[0];
+    return this.spriteData.frames[firstFrameKey].frame.h;
+  }
+
+  public get width(): number {
+    // Assuming all frames have the same width, return the width of the first frame
+    const firstFrameKey = Object.keys(this.spriteData.frames)[0];
+    return this.spriteData.frames[firstFrameKey].frame.w;
+  }
+
   drawFrame(
     ctx: CanvasRenderingContext2D,
     frameName: string,
@@ -115,11 +127,61 @@ export class Sprite {
       }
     }
 
-    this.drawFrame(
-      ctx,
-      this.currentFrameIndex.toString(),
-      x,
-      y
-    );
+    this.drawFrame(ctx, this.currentFrameIndex.toString(), x, y);
+  }
+
+  drawTiledAnimation(
+    ctx: CanvasRenderingContext2D,
+    tagName: string,
+    x: number,
+    y: number,
+    tilesX: number,
+    tilesY: number,
+    deltaTime: number,
+    repeat: boolean = true,
+    speed: number = 1
+  ) {
+    const tag = this.spriteData.meta.frameTags.find((t) => t.name === tagName);
+    if (!tag) {
+      console.warn(`Animation tag ${tagName} not found in sprite data.`);
+      return;
+    }
+
+    if (this.currentTagBeingPlayed !== tagName) {
+      this.currentTagBeingPlayed = tagName;
+      this.currentFrameIndex = tag.from;
+      this.currentFrameRunningDuration = 0;
+    }
+
+    const currentFrameData =
+      this.spriteData.frames[this.currentFrameIndex.toString()];
+
+    // Increment the running duration of the current frame, once it exceeds the duration, move to the next frame
+    this.currentFrameRunningDuration += deltaTime * speed;
+
+    if (this.currentFrameRunningDuration >= currentFrameData.duration) {
+      this.currentFrameRunningDuration = 0;
+      this.currentFrameIndex++;
+
+      if (this.currentFrameIndex > tag.to) {
+        if (repeat) {
+          this.currentFrameIndex = tag.from;
+        } else {
+          this.currentFrameIndex = tag.to; // Stay on the last frame
+        }
+      }
+    }
+
+    // Draw sprites to tile count
+    for (let tileXIndex = 0; tileXIndex < tilesX; tileXIndex++) {
+      for (let tileYIndex = 0; tileYIndex < tilesY; tileYIndex++) {
+        this.drawFrame(
+          ctx,
+          this.currentFrameIndex.toString(),
+          x + tileXIndex * currentFrameData.frame.w,
+          y + tileYIndex * currentFrameData.frame.h
+        );
+      }
+    }
   }
 }

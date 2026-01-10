@@ -1,7 +1,6 @@
 import { Easing } from "../../Animator";
 import { Entity } from "../../Entity";
 import { Game } from "../../Game";
-import type { Sprite } from "../../Sprite";
 import { drawText } from "../../util/drawText";
 
 export class Log extends Entity {
@@ -12,7 +11,7 @@ export class Log extends Entity {
 
   private fadeTimeout: number | null = null;
 
-  constructor(public origin = { x: 0, y: 0 }, public fontSprite: Sprite) {
+  constructor(public origin = { x: 0, y: 0 }) {
     super();
     this.position = { x: origin.x, y: origin.y };
   }
@@ -61,7 +60,7 @@ export class Log extends Entity {
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {
     drawText(
       context,
-      this.fontSprite,
+      Game.instance.defaultFontSprite,
       this.message || "",
       this.position.x,
       this.position.y

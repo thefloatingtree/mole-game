@@ -1,9 +1,13 @@
 import { Animator } from "./Animator";
 import { Events } from "./Events";
 import type { IScene } from "./IScene";
+import { Sprite } from "./Sprite";
+import { State } from "./State";
 import { Pinput } from "./util/Pinput";
 
 export class Game {
+  public static readonly drawDebugInfo = true;
+
   static #instance: Game | null = null;
 
   #context: CanvasRenderingContext2D | null = null;
@@ -13,9 +17,22 @@ export class Game {
   #pinput = new Pinput();
   #animator = new Animator();
   #events = new Events();
+  #state = new State();
+  #defaultFontSprite: Sprite | null = null;
+  #deferDrawRequests: (() => void)[] = [];
 
-  public camera = { x: 0, y: 0, xOffset: 0, yOffset: 0, width: 0, height: 0 };
+  public camera = {
+    x: 0,
+    y: 0,
+    xOffset: 0,
+    yOffset: 0,
+    width: 0,
+    height: 0,
+    centerX: 0,
+    centerY: 0,
+  };
   public frameCounter = 0;
+  public idealRefreshRate: number = 60;
 
   constructor() {}
 
@@ -53,12 +70,37 @@ export class Game {
     return this.#events;
   }
 
-  init(context: CanvasRenderingContext2D) {
+  public get state(): State {
+    return this.#state;
+  }
+
+  public get defaultFontSprite(): Sprite {
+    if (this.#defaultFontSprite === null) {
+      throw new Error("Default font sprite is not loaded yet.");
+    }
+    return this.#defaultFontSprite;
+  }
+
+  async init(context: CanvasRenderingContext2D) {
     this.#context = context;
     this.#context.imageSmoothingEnabled = false;
 
     this.camera.width = context.canvas.width;
     this.camera.height = context.canvas.height;
+    this.camera.centerX = this.camera.width / 2;
+    this.camera.centerY = this.camera.height / 2;
+
+    this.idealRefreshRate = await this.measureIdealRefreshRate();
+  }
+
+  setDefaultFontSprite(fontSprite: Sprite) {
+    this.#defaultFontSprite = fontSprite;
+  }
+
+  switchScene(scene: IScene) {
+    this.#currentScene?.destroy();
+    this.#currentScene = scene;
+    this.#currentScene.load();
   }
 
   loadScene(scene: IScene | null) {
@@ -84,8 +126,10 @@ export class Game {
       this.frameCounter++;
 
       let deltaTime = currentTime - this.#lastFrameTime;
-      // constrain deltaTime to a maximum of 100ms to avoid large jumps
-      if (deltaTime > 100) deltaTime = 100;
+
+      // If deltaTime is too high, set it to ideal frame time to avoid large jumps
+      // Happens when the tab is inactive, etc.
+      if (deltaTime > 100) deltaTime = 1000 / this.idealRefreshRate;
 
       this.#lastFrameTime = currentTime;
 
@@ -96,6 +140,35 @@ export class Game {
         this.#currentScene.draw(this.context, deltaTime);
       }
       this.loop();
+      this.#deferDrawRequests.forEach((drawFunction) => drawFunction());
+      this.#deferDrawRequests = [];
+    });
+  }
+
+  deferDraw(drawFunction: () => void) {
+    this.#deferDrawRequests.push(drawFunction);
+  }
+
+  private async measureIdealRefreshRate() {
+    return new Promise<number>((resolve) => {
+      // Request a couple of animation frames and measure the time between them
+      let frameTimes: number[] = [];
+      let lastTime: number | null = null;
+      const measureFrame = (time: number) => {
+        if (lastTime !== null) {
+          frameTimes.push(time - lastTime);
+        }
+        lastTime = time;
+        if (frameTimes.length < 3) {
+          requestAnimationFrame(measureFrame);
+        } else {
+          const averageFrameTime =
+            frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
+          const idealRefreshRate = 1000 / averageFrameTime;
+          resolve(idealRefreshRate);
+        }
+      };
+      requestAnimationFrame(measureFrame);
     });
   }
 }

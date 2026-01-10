@@ -1,6 +1,7 @@
-import { Game } from "../../Game";
 import { Entity } from "../../Entity";
+import { Game } from "../../Game";
 import { checkCollisionAABB, resolveCollisionAABB } from "../../util/collision";
+import { DebugColor, drawDebugRect, drawDebugTextOverlay } from "../../util/drawDebug";
 import type { MineScene } from "./MineScene";
 import type { ItemType } from "./constants/ItemType";
 
@@ -22,6 +23,8 @@ export class MineScenePlayer extends Entity {
   isAirborne = false;
   isFacing = { x: 1, y: 0 };
   isMoving = false;
+
+  isDead = false;
 
   constructor(private scene: MineScene) {
     super();
@@ -76,6 +79,10 @@ export class MineScenePlayer extends Entity {
       this.inventory.set(itemType, { type: itemType, quantity });
     }
 
+    Game.instance.state.set(
+      "player-inventory",
+      Object.fromEntries(this.inventory)
+    );
     Game.instance.events.dispatch("log-message", `+${quantity} ${itemType}`);
   }
 
@@ -99,6 +106,13 @@ export class MineScenePlayer extends Entity {
         this.velocity.y = resolved.vy;
 
         if (resolved.side === "bottom") anyBottomCollision = true;
+      }
+      // Death check
+      if (block.deathCollisionBox && !this.isAirborne) {
+        if (checkCollisionAABB(this.collisionBox, block.deathCollisionBox)) {
+          this.isDead = true;
+          Game.instance.events.dispatch("player-death");
+        }
       }
     }
     this.isAirborne = !anyBottomCollision;
@@ -128,17 +142,17 @@ export class MineScenePlayer extends Entity {
       this.miningTimer = setInterval(() => {
         const drop = selectedBlock.mine(this.mineStrength);
         if (drop) this.addItemToInventory(drop.type, drop.quantity);
-
-        console.log(this.inventory);
       }, this.mineTickTime);
     }
   }
 
   update(deltaTime: number): void {
+    if (this.isDead) return;
+
     this.isMoving = false;
 
     if (Game.instance.input.isPressed("b")) {
-      this.scene.blocks.forEach(block => block.shouldApplyGravity = true)
+      this.scene.blocks.forEach((block) => (block.shouldApplyGravity = true));
     }
 
     if (Game.instance.input.isReleased("spacebar")) {
@@ -182,6 +196,8 @@ export class MineScenePlayer extends Entity {
   }
 
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {
+    if (this.isDead) return;
+
     if (this.isAirborne) {
       this.scene.playerSprite?.drawAnimation(
         context,
@@ -190,10 +206,7 @@ export class MineScenePlayer extends Entity {
         this.cameraPosition.y,
         deltaTime
       );
-      return;
-    }
-
-    if (this.isMoving) {
+    } else if (this.isMoving) {
       this.scene.playerSprite?.drawAnimation(
         context,
         this.isFacing.x === -1 ? "Run-L" : "Run-R",
@@ -201,25 +214,30 @@ export class MineScenePlayer extends Entity {
         this.cameraPosition.y,
         deltaTime
       );
-      return;
+    } else {
+      this.scene.playerSprite?.drawAnimation(
+        context,
+        this.isFacing.x === -1 ? "Idle-L" : "Idle-R",
+        this.cameraPosition.x,
+        this.cameraPosition.y,
+        deltaTime
+      );
     }
 
-    this.scene.playerSprite?.drawAnimation(
-      context,
-      this.isFacing.x === -1 ? "Idle-L" : "Idle-R",
-      this.cameraPosition.x,
-      this.cameraPosition.y,
-      deltaTime
+
+    drawDebugRect(this.collisionBox, DebugColor.BLUE);
+    drawDebugRect(this.selectionCollisionBox, DebugColor.GREEN);
+
+    // Draw player x/y position for debugging
+    drawDebugTextOverlay(
+      this.position.x.toString(),
+      10,
+      10
     );
-
-    // Debug: Draw selection box
-
-    // context.strokeStyle = "red";
-    // context.strokeRect(
-    //   this.selectionCollisionBox.x - Game.instance.camera.x,
-    //   this.selectionCollisionBox.y - Game.instance.camera.y,
-    //   this.selectionCollisionBox.width,
-    //   this.selectionCollisionBox.height
-    // );
+    drawDebugTextOverlay(
+      this.position.y.toString(),
+      10,
+      20
+    );
   }
 }

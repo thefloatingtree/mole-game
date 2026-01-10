@@ -1,7 +1,8 @@
 import { Game } from "./Game";
-import { MineScene } from "./scenes/mine-scene/MineScene";
+import { MainMenuScene } from "./scenes/main-menu-scene/MainMenuScene";
+import { Sprite } from "./Sprite";
 
-function main() {
+async function main() {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
   const context = canvas.getContext("2d") as CanvasRenderingContext2D;
 
@@ -9,8 +10,14 @@ function main() {
     throw new Error("Failed to get 2D context");
   }
 
-  Game.instance.init(context);
-  Game.instance.loadScene(new MineScene());
+  const defaultFontSprite = await Sprite.load(
+    new URL("/assets/sprites/font-sprite.png", import.meta.url).href,
+    new URL("/assets/sprites/font-sprite.json", import.meta.url).href
+  );
+
+  await Game.instance.init(context);
+  Game.instance.setDefaultFontSprite(defaultFontSprite);
+  Game.instance.loadScene(new MainMenuScene());
   Game.instance.start();
 }
 

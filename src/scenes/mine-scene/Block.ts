@@ -1,5 +1,6 @@
 import { Entity } from "../../Entity";
 import { checkCollisionAABB, resolveCollisionAABB } from "../../util/collision";
+import { DebugColor, drawDebugRect } from "../../util/drawDebug";
 import { BlockType } from "./constants/BlockType";
 import { ItemType } from "./constants/ItemType";
 import type { MineScene } from "./MineScene";
@@ -105,6 +106,17 @@ export class Block extends Entity {
       vy: this.velocity.y,
       width: 32,
       height: 32,
+    };
+  }
+
+  public get deathCollisionBox() {
+    if (!this.isAirborne) return null;
+    // Inset by 4 pixels on each side
+    return {
+      x: this.position.x + 6,
+      y: this.position.y + 28,
+      width: 20,
+      height: 8,
     };
   }
 
@@ -254,5 +266,10 @@ export class Block extends Entity {
         this.cameraPosition.y
       );
     }
+    
+    if (this.deathCollisionBox) {
+      drawDebugRect(this.deathCollisionBox)
+    }
+    drawDebugRect(this.collisionBox, DebugColor.BLUE);
   }
 }
