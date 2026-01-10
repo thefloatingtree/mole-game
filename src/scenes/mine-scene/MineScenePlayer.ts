@@ -1,7 +1,11 @@
 import { Entity } from "../../Entity";
 import { Game } from "../../Game";
 import { checkCollisionAABB, resolveCollisionAABB } from "../../util/collision";
-import { DebugColor, drawDebugRect, drawDebugTextOverlay } from "../../util/drawDebug";
+import {
+  DebugColor,
+  drawDebugRect,
+  drawDebugTextOverlay,
+} from "../../util/drawDebug";
 import type { MineScene } from "./MineScene";
 import type { ItemType } from "./constants/ItemType";
 
@@ -88,6 +92,7 @@ export class MineScenePlayer extends Entity {
 
   resolveCollisionWithEnvironment(): void {
     let anyBottomCollision = false;
+    let selectedBlock = null;
     for (const block of this.scene.blocks) {
       if (checkCollisionAABB(this.collisionBox, block.collisionBox)) {
         const resolved = resolveCollisionAABB(
@@ -114,12 +119,25 @@ export class MineScenePlayer extends Entity {
           Game.instance.events.dispatch("player-death");
         }
       }
+
+      // Select check
+      block.isSelected = false;
+      if (
+        !this.isAirborne &&
+        checkCollisionAABB(this.selectionCollisionBox, block.collisionBox)
+      ) {
+        selectedBlock = block;
+      }
     }
     this.isAirborne = !anyBottomCollision;
+
+    if (selectedBlock) {
+      selectedBlock.isSelected = true;
+    }
   }
 
   mineSelectedBlock(): void {
-    if (Game.instance.input.isReleased("e")) {
+    if (Game.instance.input.isReleased("e") || this.isMoving) {
       if (this.miningTimer) {
         clearInterval(this.miningTimer);
         this.miningTimer = null;
@@ -224,20 +242,11 @@ export class MineScenePlayer extends Entity {
       );
     }
 
-
     drawDebugRect(this.collisionBox, DebugColor.BLUE);
     drawDebugRect(this.selectionCollisionBox, DebugColor.GREEN);
 
     // Draw player x/y position for debugging
-    drawDebugTextOverlay(
-      this.position.x.toString(),
-      10,
-      10
-    );
-    drawDebugTextOverlay(
-      this.position.y.toString(),
-      10,
-      20
-    );
+    drawDebugTextOverlay(this.position.x.toString(), 10, 10);
+    drawDebugTextOverlay(this.position.y.toString(), 10, 20);
   }
 }

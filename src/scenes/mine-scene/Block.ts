@@ -1,9 +1,13 @@
 import { Entity } from "../../Entity";
+import { Game } from "../../Game";
 import { checkCollisionAABB, resolveCollisionAABB } from "../../util/collision";
 import { DebugColor, drawDebugRect } from "../../util/drawDebug";
 import { BlockType } from "./constants/BlockType";
 import { ItemType } from "./constants/ItemType";
 import type { MineScene } from "./MineScene";
+import { BlockDestroyParticleEmitter } from "./particles/BlockDestroyParticleEmitter";
+import { BlockFallingParticleEmitter } from "./particles/BlockFallingParticleEmitter";
+import { BlockMineParticleEmitter } from "./particles/BlockMineParticleEmitter";
 
 export class Block extends Entity {
   readonly gravity = 0.005;
@@ -81,6 +85,8 @@ export class Block extends Entity {
   public isAirborne = false;
   public shouldApplyGravity = false;
 
+  private fallingParticleEmitter: BlockFallingParticleEmitter | null = null;
+
   velocity = { x: 0, y: 0 };
 
   constructor(
@@ -127,10 +133,72 @@ export class Block extends Entity {
     if (!this.isInteractable || this.shouldDestroy) return null;
     this.durability -= amount;
     if (this.durability <= 0) {
-      this.shouldDestroy = true;
+      this.onBlockDestroyed();
       return this.dropLookup[this.type];
     }
+    Game.instance.particles.addEmitter(
+      new BlockMineParticleEmitter(
+        {
+          x: this.position.x + 16,
+          y: this.position.y + 16,
+        },
+        this.scene.blocks
+          .filter((block) => block.id !== this.id)
+          .map((block) => block.collisionBox)
+      )
+    );
     return null;
+  }
+
+  onBlockLanded(): void {
+    this.scene.cameraShakeIntensity = 5;
+    setTimeout(() => {
+      this.scene.cameraShakeIntensity = 0;
+    }, 150);
+    Game.instance.particles.addEmitter(
+      new BlockMineParticleEmitter(
+        {
+          x: this.position.x + 16,
+          y: this.position.y + 32,
+        },
+        this.scene.blocks
+          .filter((block) => block.id !== this.id)
+          .map((block) => block.collisionBox),
+        5,
+        2
+      )
+    );
+
+    this.fallingParticleEmitter?.stopSpawning();
+  }
+
+  onBlockStartFalling(): void {
+    this.fallingParticleEmitter = new BlockFallingParticleEmitter({
+      x: this.position.x + 4,
+      y: this.position.y,
+      width: 24,
+      height: 2,
+    });
+    Game.instance.particles.addEmitter(this.fallingParticleEmitter);
+  }
+
+  onBlockDestroyed(): void {
+    this.isInteractable = false;
+    this.shouldApplyGravity = false;
+    this.shouldDestroy = true;
+
+    this.scene.cameraShakeIntensity = 2;
+    setTimeout(() => {
+      this.scene.cameraShakeIntensity = 0;
+    }, 100);
+
+    Game.instance.particles.addEmitter(
+      new BlockDestroyParticleEmitter(
+        this.collisionBox,
+        this.scene.blocks.filter((block) => block.id !== this.id),
+        this.type === BlockType.STONE
+      )
+    );
   }
 
   resolveCollisionWithEnvironment(): void {
@@ -154,10 +222,11 @@ export class Block extends Entity {
     }
 
     if (this.isAirborne && anyBottomCollision) {
-      this.scene.cameraShakeIntensity = 5;
-      setTimeout(() => {
-        this.scene.cameraShakeIntensity = 0;
-      }, 150);
+      this.onBlockLanded();
+    }
+
+    if (!this.isAirborne && !anyBottomCollision) {
+      this.onBlockStartFalling();
     }
 
     this.isAirborne = !anyBottomCollision;
@@ -198,12 +267,9 @@ export class Block extends Entity {
   update(deltaTime: number): void {
     if (!this.isInteractable) return;
 
-    this.isSelected =
-      !this.scene.playerEntity.isAirborne &&
-      checkCollisionAABB(
-        this.collisionBox,
-        this.scene.playerEntity.selectionCollisionBox
-      );
+    if (!this.isSelected && this.isBeingMined) {
+      this.isBeingMined = false;
+    }
 
     // Apply gravity to stone blocks
     if (this.shouldApplyGravity) {
@@ -213,6 +279,11 @@ export class Block extends Entity {
       this.resolveCollisionWithEnvironment();
     } else {
       this.attemptToShakeLoose();
+    }
+
+    if (this.fallingParticleEmitter) {
+      this.fallingParticleEmitter.box.x = this.position.x + 4;
+      this.fallingParticleEmitter.box.y = this.position.y;
     }
   }
 
@@ -266,10 +337,14 @@ export class Block extends Entity {
         this.cameraPosition.y
       );
     }
-    
+
     if (this.deathCollisionBox) {
-      drawDebugRect(this.deathCollisionBox)
+      drawDebugRect(this.deathCollisionBox);
     }
     drawDebugRect(this.collisionBox, DebugColor.BLUE);
+
+    if (this.isBeingMined) {
+      drawDebugRect(this.collisionBox, DebugColor.GREEN);
+    }
   }
 }

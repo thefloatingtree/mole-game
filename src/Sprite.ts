@@ -172,16 +172,33 @@ export class Sprite {
       }
     }
 
+
     // Draw sprites to tile count
-    for (let tileXIndex = 0; tileXIndex < tilesX; tileXIndex++) {
-      for (let tileYIndex = 0; tileYIndex < tilesY; tileYIndex++) {
-        this.drawFrame(
-          ctx,
-          this.currentFrameIndex.toString(),
-          x + tileXIndex * currentFrameData.frame.w,
-          y + tileYIndex * currentFrameData.frame.h
-        );
-      }
+    const canvas = document.createElement('canvas');
+    canvas.width = currentFrameData.frame.w;
+    canvas.height = currentFrameData.frame.h;
+    const canvasCtx = canvas.getContext('2d')!;
+    canvasCtx.imageSmoothingEnabled = false;
+    canvasCtx.drawImage(
+      this.spriteImage,
+      currentFrameData.frame.x,
+      currentFrameData.frame.y,
+      currentFrameData.frame.w,
+      currentFrameData.frame.h,
+      0,
+      0,
+      currentFrameData.frame.w,
+      currentFrameData.frame.h
+    );
+    const pattern = ctx.createPattern(canvas, "repeat");
+    if (pattern) {
+      ctx.fillStyle = pattern;
+      ctx.fillRect(
+      Math.round(x),
+      Math.round(y),
+      tilesX * currentFrameData.frame.w,
+      tilesY * currentFrameData.frame.h
+      );
     }
   }
 }

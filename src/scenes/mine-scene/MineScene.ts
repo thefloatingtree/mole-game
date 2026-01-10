@@ -2,8 +2,8 @@ import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
+import { drawCircle } from "../../util/draw";
 import { DeathScene } from "../death-scene/DeathScene";
-import { MainMenuScene } from "../main-menu-scene/MainMenuScene";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
 import { Log } from "./Log";
@@ -35,6 +35,8 @@ export class MineScene implements IScene {
   playerEntity = new MineScenePlayer(this);
   blocks: Block[] = [];
   log: Log | null = null;
+
+  circleSize = 1;
 
   async load() {
     this.playerSprite = await Sprite.load(
@@ -153,10 +155,6 @@ export class MineScene implements IScene {
       if (block.shouldDestroy) {
         this.blocks.splice(this.blocks.indexOf(block), 1);
       }
-    }
-
-    if (Game.instance.input.isPressed("t")) {
-      Game.instance.switchScene(new MainMenuScene());
     }
   }
 

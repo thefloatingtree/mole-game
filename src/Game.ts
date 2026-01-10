@@ -1,12 +1,13 @@
 import { Animator } from "./Animator";
 import { Events } from "./Events";
 import type { IScene } from "./IScene";
+import { Particles } from "./Particles";
 import { Sprite } from "./Sprite";
 import { State } from "./State";
 import { Pinput } from "./util/Pinput";
 
 export class Game {
-  public static readonly drawDebugInfo = true;
+  public static readonly drawDebugInfo = false;
 
   static #instance: Game | null = null;
 
@@ -18,6 +19,7 @@ export class Game {
   #animator = new Animator();
   #events = new Events();
   #state = new State();
+  #particles = new Particles();
   #defaultFontSprite: Sprite | null = null;
   #deferDrawRequests: (() => void)[] = [];
 
@@ -74,6 +76,10 @@ export class Game {
     return this.#state;
   }
 
+  public get particles(): Particles {
+    return this.#particles;
+  }
+
   public get defaultFontSprite(): Sprite {
     if (this.#defaultFontSprite === null) {
       throw new Error("Default font sprite is not loaded yet.");
@@ -99,6 +105,7 @@ export class Game {
 
   switchScene(scene: IScene) {
     this.#currentScene?.destroy();
+    this.#particles.reset();
     this.#currentScene = scene;
     this.#currentScene.load();
   }
@@ -136,12 +143,14 @@ export class Game {
       if (this.#currentScene) {
         this.#pinput.update();
         this.#animator.update(deltaTime);
+        this.#particles.update(deltaTime);
         this.#currentScene.update(deltaTime);
         this.#currentScene.draw(this.context, deltaTime);
+        this.#particles.draw(this.context, deltaTime);
+        this.#deferDrawRequests.forEach((drawFunction) => drawFunction());
+        this.#deferDrawRequests = [];
       }
       this.loop();
-      this.#deferDrawRequests.forEach((drawFunction) => drawFunction());
-      this.#deferDrawRequests = [];
     });
   }
 

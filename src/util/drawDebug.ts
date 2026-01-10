@@ -44,8 +44,8 @@ export function drawDebugRect(
 
   // Grab the image data for the area we want to draw the box in
   const imageData = Game.instance.context.getImageData(
-    box.x - Game.instance.camera.x,
-    box.y - Game.instance.camera.y,
+    Math.round(box.x - Game.instance.camera.x),
+    Math.round(box.y - Game.instance.camera.y),
     box.width,
     box.height
   );
@@ -78,8 +78,8 @@ export function drawDebugRect(
   Game.instance.deferDraw(() => {
     Game.instance.context.putImageData(
       imageData,
-      box.x - Game.instance.camera.x,
-      box.y - Game.instance.camera.y
+      Math.round(box.x - Game.instance.camera.x),
+      Math.round(box.y - Game.instance.camera.y)
     );
   });
 }
@@ -170,8 +170,8 @@ export function drawDebugText(text: string, x: number, y: number) {
       Game.instance.context,
       Game.instance.defaultFontSprite,
       text,
-      x - Game.instance.camera.x,
-      y - Game.instance.camera.y
+      Math.round(x - Game.instance.camera.x),
+      Math.round(y - Game.instance.camera.y)
     );
   });
 }
@@ -184,8 +184,8 @@ export function drawDebugTextOverlay(text: string, x: number, y: number) {
       Game.instance.context,
       Game.instance.defaultFontSprite,
       text,
-      x,
-      y
+      Math.round(x),
+      Math.round(y)
     );
   });
 }
