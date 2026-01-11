@@ -156,7 +156,7 @@ export class Block extends Entity {
           x: this.position.x + 16,
           y: this.position.y + 16,
         },
-        this.scene.blocks
+        this.scene.blockEntities
           .filter((block) => block.id !== this.id && !block.isIntangible)
           .map((block) => block.collisionBox)
       )
@@ -176,7 +176,7 @@ export class Block extends Entity {
           x: this.position.x + 16,
           y: this.position.y + 32,
         },
-        this.scene.blocks
+        this.scene.blockEntities
           .filter((block) => block.id !== this.id && !block.isIntangible)
           .map((block) => block.collisionBox),
         5,
@@ -212,7 +212,7 @@ export class Block extends Entity {
     Game.instance.particles.addEmitter(
       new BlockDestroyParticleEmitter(
         this.collisionBox,
-        this.scene.blocks.filter((block) => block.id !== this.id && !block.isIntangible),
+        this.scene.blockEntities.filter((block) => block.id !== this.id && !block.isIntangible),
         this.type === BlockType.STONE
       )
     );
@@ -221,7 +221,7 @@ export class Block extends Entity {
 
   resolveCollisionWithEnvironment(): void {
     let anyBottomCollision = false;
-    for (const block of this.scene.blocks) {
+    for (const block of this.scene.blockEntities) {
       if (this.id === block.id) continue;
       if (block.isIntangible) continue;
 
@@ -256,19 +256,19 @@ export class Block extends Entity {
     if (!this.isInteractable) return;
     if (this.type !== BlockType.DIRT) return;
 
-    const belowBlock = this.scene.blocks.find(
+    const belowBlock = this.scene.blockEntities.find(
       (block) =>
         block.position.x === this.position.x &&
         block.position.y === this.position.y + 32
     );
     if (belowBlock && belowBlock.type !== BlockType.AIR) return;
 
-    const leftBlock = this.scene.blocks.find(
+    const leftBlock = this.scene.blockEntities.find(
       (block) =>
         block.position.x === this.position.x - 32 &&
         block.position.y === this.position.y
     );
-    const rightBlock = this.scene.blocks.find(
+    const rightBlock = this.scene.blockEntities.find(
       (block) =>
         block.position.x === this.position.x + 32 &&
         block.position.y === this.position.y

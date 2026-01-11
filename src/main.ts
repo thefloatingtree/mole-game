@@ -4,7 +4,9 @@ import { Sprite } from "./Sprite";
 
 async function main() {
   const canvas = document.getElementById("game") as HTMLCanvasElement;
-  const context = canvas.getContext("2d") as CanvasRenderingContext2D;
+  const context = canvas.getContext("2d", {
+    willReadFrequently: true,
+  }) as CanvasRenderingContext2D;
 
   if (!context) {
     throw new Error("Failed to get 2D context");

@@ -22,7 +22,9 @@ export class Animator {
         animation.to,
         Math.min(animation.easing(animation.elapsed / animation.duration), 1)
       );
-      animation.target[animation.key] = newValue;
+      animation.target[animation.key] = animation.valueFilter
+        ? animation.valueFilter(newValue)
+        : newValue;
     }
 
     this.activeAnimations = this.activeAnimations.filter((animation) => {
@@ -50,6 +52,7 @@ type Animation<T> = {
   elapsed: number;
   easing: EasingFunction;
   onComplete?: () => void;
+  valueFilter?: (value: number) => number;
 };
 
 type EasingFunction = (x: number) => number;

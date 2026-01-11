@@ -94,7 +94,7 @@ export class MineScenePlayer extends Entity {
   resolveCollisionWithEnvironment(): void {
     let anyBottomCollision = false;
     let selectedBlock = null;
-    for (const block of this.scene.blocks) {
+    for (const block of this.scene.blockEntities) {
       if (!block.isIntangible && checkCollisionAABB(this.collisionBox, block.collisionBox)) {
         const resolved = resolveCollisionAABB(
           this.collisionBox,
@@ -130,6 +130,12 @@ export class MineScenePlayer extends Entity {
         selectedBlock = block;
       }
     }
+
+    // Check player just landed
+    if (anyBottomCollision && this.isAirborne) {
+      Game.instance.events.dispatch("player-land");
+    }
+
     this.isAirborne = !anyBottomCollision;
 
     if (selectedBlock) {
@@ -143,7 +149,7 @@ export class MineScenePlayer extends Entity {
         clearInterval(this.miningTimer);
         this.miningTimer = null;
 
-        for (const block of this.scene.blocks) {
+        for (const block of this.scene.blockEntities) {
           block.isBeingMined = false;
         }
       }
@@ -151,7 +157,7 @@ export class MineScenePlayer extends Entity {
 
     if (!Game.instance.input.isDown("e")) return;
 
-    const selectedBlock = this.scene.blocks.find((block) => block.isSelected);
+    const selectedBlock = this.scene.blockEntities.find((block) => block.isSelected);
     if (!selectedBlock) return;
 
     if (!selectedBlock.isBeingMined && this.miningTimer === null && !this.isMoving) {
@@ -177,7 +183,7 @@ export class MineScenePlayer extends Entity {
     this.isMoving = false;
 
     if (Game.instance.input.isPressed("b")) {
-      this.scene.blocks.forEach((block) => (block.shouldApplyGravity = true));
+      this.scene.blockEntities.forEach((block) => (block.shouldApplyGravity = true));
     }
 
     if (Game.instance.input.isReleased("spacebar")) {

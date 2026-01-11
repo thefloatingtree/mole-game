@@ -1,0 +1,61 @@
+{ "frames": {
+   "0": {
+    "frame": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "sourceSize": { "w": 640, "h": 360 },
+    "duration": 100
+   },
+   "1": {
+    "frame": { "x": 0, "y": 360, "w": 640, "h": 360 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "sourceSize": { "w": 640, "h": 360 },
+    "duration": 100
+   },
+   "2": {
+    "frame": { "x": 0, "y": 720, "w": 640, "h": 360 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "sourceSize": { "w": 640, "h": 360 },
+    "duration": 100
+   },
+   "3": {
+    "frame": { "x": 0, "y": 1080, "w": 640, "h": 360 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "sourceSize": { "w": 640, "h": 360 },
+    "duration": 100
+   },
+   "4": {
+    "frame": { "x": 0, "y": 1440, "w": 640, "h": 360 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "sourceSize": { "w": 640, "h": 360 },
+    "duration": 100
+   },
+   "5": {
+    "frame": { "x": 0, "y": 1800, "w": 640, "h": 360 },
+    "rotated": false,
+    "trimmed": false,
+    "spriteSourceSize": { "x": 0, "y": 0, "w": 640, "h": 360 },
+    "sourceSize": { "w": 640, "h": 360 },
+    "duration": 100
+   }
+ },
+ "meta": {
+  "app": "https://www.aseprite.org/",
+  "version": "1.3.16.1-x64",
+  "image": "lantern-sprite.png",
+  "format": "RGBA8888",
+  "size": { "w": 640, "h": 2160 },
+  "scale": "1",
+  "frameTags": [
+  ]
+ }
+}

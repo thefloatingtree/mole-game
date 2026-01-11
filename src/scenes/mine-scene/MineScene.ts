@@ -1,21 +1,25 @@
+import { Howl } from "howler";
 import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
-import { randomAtRate, randomBetween } from "../../util/random";
+import { drawText } from "../../util/drawText";
+import { randomBetween } from "../../util/random";
 import { DeathScene } from "../death-scene/DeathScene";
 import { MainMenuScene } from "../main-menu-scene/MainMenuScene";
 import { WinScene } from "../win-scene/WinScene";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
+import { Lantern } from "./Lantern";
 import { Log } from "./Log";
 import { MineScenePlayer } from "./MineScenePlayer";
-import { Howl } from "howler";
+import { ShopScene } from "../shop-scene/ShopScene";
 
 type Level = {
   meta: {
     width: number;
     height: number;
+    baseLevelTimeInSeconds: number;
   };
   blocks: BlockType[];
 };
@@ -31,6 +35,7 @@ export class MineScene implements IScene {
   public cameraShakeIntensity = 0;
 
   public playerSprite: Sprite | null = null;
+  public playerLanternSprite: Sprite | null = null;
   public environmentSprite: Sprite | null = null;
   public iconSprite: Sprite | null = null;
   public transitionsSprite: Sprite | null = null;
@@ -40,10 +45,17 @@ export class MineScene implements IScene {
   public blockMinedAudio: Howl | null = null;
   public playerJumpAudio: Howl | null = null;
   public playerWalkAudio: Howl | null = null;
+  public playerLanternExtinguishAudio: Howl | null = null;
+
+  public maxLevelTimeInMilliseconds = 0;
+  public levelTimeInMilliseconds = 0;
+
+  private haltScene = false;
 
   playerEntity = new MineScenePlayer(this);
-  blocks: Block[] = [];
-  log: Log | null = null;
+  playerLanternEntity = new Lantern(this);
+  blockEntities: Block[] = [];
+  logEntity: Log | null = null;
 
   async load() {
     this.playerSprite = await Sprite.load(
@@ -62,11 +74,18 @@ export class MineScene implements IScene {
       new URL("/assets/sprites/transitions-sprite.png", import.meta.url).href,
       new URL("/assets/sprites/transitions-sprite.json", import.meta.url).href
     );
+    this.playerLanternSprite = await Sprite.load(
+      new URL("/assets/sprites/lantern-sprite.png", import.meta.url).href,
+      new URL("/assets/sprites/lantern-sprite.json", import.meta.url).href
+    );
 
     // Load level data
     const level1: Level = await fetch(
       new URL("/assets/data/mine-levels/1.json", import.meta.url).href
     ).then((response) => response.json());
+
+    this.levelTimeInMilliseconds = level1.meta.baseLevelTimeInSeconds * 1000;
+    this.maxLevelTimeInMilliseconds = this.levelTimeInMilliseconds;
 
     // Load audio
     this.blockStartFallAudio = new Howl({
@@ -84,6 +103,9 @@ export class MineScene implements IScene {
     this.playerWalkAudio = new Howl({
       src: [new URL("/assets/audio/walk.wav", import.meta.url).href],
     }).load();
+    this.playerLanternExtinguishAudio = new Howl({
+      src: [new URL("/assets/audio/extinguish.wav", import.meta.url).href],
+    }).load();
 
     for (let i = 0; i < level1.blocks.length; i++) {
       const x = (i % level1.meta.width) * 32;
@@ -96,11 +118,13 @@ export class MineScene implements IScene {
         continue;
       }
       if (blockType === BlockType.AIR) continue;
-      this.blocks.push(new Block(this, { x, y }, blockType));
+      this.blockEntities.push(new Block(this, { x, y }, blockType));
     }
 
-    this.log = new Log({ x: 8, y: 165 });
-    this.log.init();
+    this.logEntity = new Log({ x: 8, y: 165 });
+    this.logEntity.init();
+
+    this.playerLanternEntity.init();
 
     Game.instance.events.subscribe("player-death", () => {
       setTimeout(() => {
@@ -114,11 +138,23 @@ export class MineScene implements IScene {
 
     Game.instance.events.subscribe("block-landed", () => {
       this.blockLandedAudio?.play();
+      Game.instance.events.dispatch(
+        "player-lantern-shake",
+        { x: 12, y: 12 },
+        200,
+        0.15
+      );
     });
 
     Game.instance.events.subscribe("block-mined", () => {
       this.blockMinedAudio?.rate(randomBetween(0.95, 1.05));
       this.blockMinedAudio?.play();
+      Game.instance.events.dispatch(
+        "player-lantern-shake",
+        { x: 6, y: 6 },
+        150,
+        0.17
+      );
     });
 
     Game.instance.events.subscribe("player-start-mine-block", () => {
@@ -157,7 +193,7 @@ export class MineScene implements IScene {
         return;
       }
       if (block.type === BlockType.EXIT) {
-        Game.instance.switchScene(new MainMenuScene());
+        Game.instance.switchScene(new ShopScene());
         setTimeout(() => {
           new Howl({
             src: [new URL("/assets/audio/select.wav", import.meta.url).href],
@@ -230,16 +266,26 @@ export class MineScene implements IScene {
   }
 
   update(deltaTime: number): void {
-    this.playerEntity.update(deltaTime);
-    this.log?.update(deltaTime);
+    if (this.haltScene) return;
 
-    for (const block of this.blocks) {
+    this.levelTimeInMilliseconds -= deltaTime;
+    if (this.levelTimeInMilliseconds <= 0) {
+      this.levelTimeInMilliseconds = 0;
+      Game.instance.events.dispatch("player-death");
+      this.haltScene = true;
+    }
+
+    this.playerEntity.update(deltaTime);
+    this.playerLanternEntity.update(deltaTime);
+    this.logEntity?.update(deltaTime);
+
+    for (const block of this.blockEntities) {
       block.update(deltaTime);
     }
 
-    for (const block of this.blocks) {
+    for (const block of this.blockEntities) {
       if (block.shouldDestroy) {
-        this.blocks.splice(this.blocks.indexOf(block), 1);
+        this.blockEntities.splice(this.blockEntities.indexOf(block), 1);
       }
     }
   }
@@ -251,31 +297,52 @@ export class MineScene implements IScene {
     context.fillStyle = Colors.BLACK;
     context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 
-    for (const block of this.blocks) {
+    for (const block of this.blockEntities) {
       if (!block.isIntangible) continue;
       block.draw(context);
     }
 
     this.playerEntity.draw(context, deltaTime);
 
-    for (const block of this.blocks) {
+    for (const block of this.blockEntities) {
       if (block.isIntangible) continue;
       block.draw(context);
     }
 
-    this.log?.draw(context, deltaTime);
+    Game.instance.deferDraw(() => {
+      this.playerLanternEntity.draw(context, deltaTime);
 
-    this.transitionsSprite?.drawTiledAnimation(
-      context,
-      "FadeIn",
-      0,
-      0,
-      40,
-      24,
-      deltaTime,
-      false,
-      1.25
-    );
+      // UI
+      this.logEntity?.draw(context, deltaTime);
+      this.transitionsSprite?.drawTiledAnimation(
+        context,
+        "FadeIn",
+        0,
+        0,
+        40,
+        24,
+        deltaTime,
+        false,
+        1.25
+      );
+
+      // Draw lantern timer (1:23 format, top-right corner)
+      const totalSeconds = Math.ceil(this.levelTimeInMilliseconds / 1000);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const timeString = `Lantern ${minutes}:${seconds
+        .toString()
+        .padStart(2, "0")}`;
+
+      drawText(
+        context,
+        Game.instance.defaultFontSprite,
+        timeString,
+        context.canvas.width - 80,
+        10,
+        false
+      );
+    });
   }
 
   destroy(): void {}

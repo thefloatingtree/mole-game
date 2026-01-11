@@ -101,7 +101,6 @@ export class BlockFallingParticleEmitter extends ParticleEmitter {
   draw(context: CanvasRenderingContext2D): void {
     for (const particle of this.particles) {
       if (particle.life <= 0) continue;
-      console.log(particle.x, particle.y);
       drawPoint(context, particle.x, particle.y, Colors.WHITE, 1);
       drawDebugPoint(particle, DebugColor.YELLOW);
     }

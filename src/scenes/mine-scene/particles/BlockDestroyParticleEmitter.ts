@@ -144,7 +144,6 @@ export class BlockDestroyParticleEmitter extends ParticleEmitter {
   draw(context: CanvasRenderingContext2D): void {
     for (const sparkParticle of this.sparkParticles) {
       if (sparkParticle.life <= 0) continue;
-      console.log(sparkParticle.data);
       drawCircle(
         context,
         sparkParticle.x,

@@ -8,11 +8,21 @@ import { MineScene } from "../mine-scene/MineScene";
 export class DeathScene implements IScene {
   public transitionsSprite: Sprite | null = null;
 
+  public deathAudio: Howl | null = null;
+
   async load() {
     this.transitionsSprite = await Sprite.load(
       new URL("/assets/sprites/transitions-sprite.png", import.meta.url).href,
       new URL("/assets/sprites/transitions-sprite.json", import.meta.url).href
     );
+
+    this.deathAudio = new Howl({
+      src: [new URL("/assets/audio/death.wav", import.meta.url).href],
+    }).load();
+
+    if (!this.deathAudio.playing()) {
+      this.deathAudio.play();
+    }
   }
 
   update(deltaTime: number): void {
