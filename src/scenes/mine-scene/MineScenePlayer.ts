@@ -14,7 +14,7 @@ export class MineScenePlayer extends Entity {
   readonly jumpSpeed = 0.3;
   readonly gravity = 0.001;
 
-  readonly mineTickTime = 250;
+  readonly mineTickTime = 500;
   readonly mineStrength = 1;
   mineDirection: "horizontal" | "down" | "up" = "horizontal";
 
@@ -22,6 +22,7 @@ export class MineScenePlayer extends Entity {
   position = { x: 0, y: 0 };
   velocity = { x: 0, y: 0 };
   miningTimer: number | null = null;
+  walkingSoundTimer: number | null = null;
 
   isJumpDisabled = false;
   isAirborne = false;
@@ -94,7 +95,7 @@ export class MineScenePlayer extends Entity {
     let anyBottomCollision = false;
     let selectedBlock = null;
     for (const block of this.scene.blocks) {
-      if (checkCollisionAABB(this.collisionBox, block.collisionBox)) {
+      if (!block.isIntangible && checkCollisionAABB(this.collisionBox, block.collisionBox)) {
         const resolved = resolveCollisionAABB(
           this.collisionBox,
           block.collisionBox
@@ -153,6 +154,12 @@ export class MineScenePlayer extends Entity {
     const selectedBlock = this.scene.blocks.find((block) => block.isSelected);
     if (!selectedBlock) return;
 
+    if (!selectedBlock.isBeingMined && this.miningTimer === null && !this.isMoving) {
+      Game.instance.events.dispatch("player-start-mine-block", {
+        block: selectedBlock,
+      });
+    }
+
     selectedBlock.isBeingMined = true;
 
     // Mine the block at a fixed interval
@@ -184,6 +191,7 @@ export class MineScenePlayer extends Entity {
     ) {
       this.velocity.y = -this.jumpSpeed;
       this.isJumpDisabled = true;
+      Game.instance.events.dispatch("player-jump");
     }
     if (Game.instance.input.isDown("a")) {
       this.position.x -= this.speed * deltaTime;
@@ -194,6 +202,10 @@ export class MineScenePlayer extends Entity {
       this.position.x += this.speed * deltaTime;
       this.isMoving = true;
       this.isFacing.x = 1;
+    }
+
+    if (Game.instance.input.isDown("a") && Game.instance.input.isDown("d")) {
+      this.isMoving = false;
     }
 
     // Hold down to mine beneath you
@@ -211,6 +223,22 @@ export class MineScenePlayer extends Entity {
     this.resolveCollisionWithEnvironment();
 
     this.mineSelectedBlock();
+
+    // Play walking sound at intervals when moving and not airborne
+    if (this.isMoving && !this.isAirborne && !this.isDead) {
+      if (this.walkingSoundTimer === null) {
+        Game.instance.events.dispatch("player-walk");
+        this.walkingSoundTimer = window.setInterval(() => {
+          if (this.isDead) return;
+          Game.instance.events.dispatch("player-walk");
+        }, 400);
+      }
+    } else {
+      if (this.walkingSoundTimer !== null) {
+        clearInterval(this.walkingSoundTimer);
+        this.walkingSoundTimer = null;
+      }
+    }
   }
 
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {

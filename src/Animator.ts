@@ -35,6 +35,10 @@ export class Animator {
       return false;
     });
   }
+
+  reset() {
+    this.activeAnimations = [];
+  }
 }
 
 type Animation<T> = {

@@ -23,6 +23,8 @@ export class Block extends Entity {
     [BlockType.IRON_ORE]: 9,
     [BlockType.EMERALD_ORE]: 12,
     [BlockType.DIAMOND_ORE]: 18,
+    [BlockType.TREASURE_CHEST]: Infinity,
+    [BlockType.EXIT]: Infinity,
     [BlockType.BEDROCK1]: Infinity,
     [BlockType.BEDROCK2]: Infinity,
     [BlockType.BEDROCK3]: Infinity,
@@ -63,6 +65,8 @@ export class Block extends Entity {
       type: ItemType.DIAMOND,
       quantity: 1,
     },
+    [BlockType.TREASURE_CHEST]: null,
+    [BlockType.EXIT]: null,
     [BlockType.BEDROCK1]: null,
     [BlockType.BEDROCK2]: null,
     [BlockType.BEDROCK3]: null,
@@ -80,6 +84,8 @@ export class Block extends Entity {
   public durability: number;
   public shouldDestroy = false;
   public isInteractable = true;
+  public isIntangible = false;
+  public isClickable = false;
   public isSelected = false;
   public isBeingMined = false;
   public isAirborne = false;
@@ -101,6 +107,14 @@ export class Block extends Entity {
 
     if (this.type >= BlockType.BEDROCK1 && this.type <= BlockType.BEDROCK9) {
       this.isInteractable = false;
+    }
+
+    if (
+      this.type === BlockType.TREASURE_CHEST ||
+      this.type === BlockType.EXIT
+    ) {
+      this.isIntangible = true;
+      this.isClickable = true;
     }
   }
 
@@ -130,7 +144,7 @@ export class Block extends Entity {
     type: ItemType;
     quantity: number;
   } | null {
-    if (!this.isInteractable || this.shouldDestroy) return null;
+    if (!this.isInteractable || this.shouldDestroy || this.isClickable) return null;
     this.durability -= amount;
     if (this.durability <= 0) {
       this.onBlockDestroyed();
@@ -143,10 +157,11 @@ export class Block extends Entity {
           y: this.position.y + 16,
         },
         this.scene.blocks
-          .filter((block) => block.id !== this.id)
+          .filter((block) => block.id !== this.id && !block.isIntangible)
           .map((block) => block.collisionBox)
       )
     );
+    Game.instance.events.dispatch("block-mined", { block: this });
     return null;
   }
 
@@ -162,12 +177,13 @@ export class Block extends Entity {
           y: this.position.y + 32,
         },
         this.scene.blocks
-          .filter((block) => block.id !== this.id)
+          .filter((block) => block.id !== this.id && !block.isIntangible)
           .map((block) => block.collisionBox),
         5,
         2
       )
     );
+    Game.instance.events.dispatch("block-landed", { block: this });
 
     this.fallingParticleEmitter?.stopSpawning();
   }
@@ -180,6 +196,7 @@ export class Block extends Entity {
       height: 2,
     });
     Game.instance.particles.addEmitter(this.fallingParticleEmitter);
+    Game.instance.events.dispatch("block-start-fall", { block: this });
   }
 
   onBlockDestroyed(): void {
@@ -195,16 +212,18 @@ export class Block extends Entity {
     Game.instance.particles.addEmitter(
       new BlockDestroyParticleEmitter(
         this.collisionBox,
-        this.scene.blocks.filter((block) => block.id !== this.id),
+        this.scene.blocks.filter((block) => block.id !== this.id && !block.isIntangible),
         this.type === BlockType.STONE
       )
     );
+    Game.instance.events.dispatch("block-destroyed", { block: this });
   }
 
   resolveCollisionWithEnvironment(): void {
     let anyBottomCollision = false;
     for (const block of this.scene.blocks) {
       if (this.id === block.id) continue;
+      if (block.isIntangible) continue;
 
       if (checkCollisionAABB(this.collisionBox, block.collisionBox)) {
         const resolved = resolveCollisionAABB(
@@ -271,6 +290,10 @@ export class Block extends Entity {
       this.isBeingMined = false;
     }
 
+    if (this.isSelected && this.isClickable && this.isBeingMined) {
+      Game.instance.events.dispatch("block-clicked", { block: this });
+    }
+
     // Apply gravity to stone blocks
     if (this.shouldApplyGravity) {
       this.velocity.y += this.gravity * deltaTime; // Gravity acceleration
@@ -322,10 +345,17 @@ export class Block extends Entity {
       );
     }
 
-    if (this.isSelected && !this.isBeingMined) {
+    if (this.isSelected && !this.isBeingMined && !this.isClickable) {
       this.scene.iconSprite?.drawFrame(
         context,
         "3",
+        this.cameraPosition.x,
+        this.cameraPosition.y
+      );
+    } else if (this.isSelected && !this.isBeingMined && this.isClickable) {
+      this.scene.iconSprite?.drawFrame(
+        context,
+        "4",
         this.cameraPosition.x,
         this.cameraPosition.y
       );

@@ -2,12 +2,15 @@ import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
-import { drawCircle } from "../../util/draw";
+import { randomAtRate, randomBetween } from "../../util/random";
 import { DeathScene } from "../death-scene/DeathScene";
+import { MainMenuScene } from "../main-menu-scene/MainMenuScene";
+import { WinScene } from "../win-scene/WinScene";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
 import { Log } from "./Log";
 import { MineScenePlayer } from "./MineScenePlayer";
+import { Howl } from "howler";
 
 type Level = {
   meta: {
@@ -32,11 +35,15 @@ export class MineScene implements IScene {
   public iconSprite: Sprite | null = null;
   public transitionsSprite: Sprite | null = null;
 
+  public blockStartFallAudio: Howl | null = null;
+  public blockLandedAudio: Howl | null = null;
+  public blockMinedAudio: Howl | null = null;
+  public playerJumpAudio: Howl | null = null;
+  public playerWalkAudio: Howl | null = null;
+
   playerEntity = new MineScenePlayer(this);
   blocks: Block[] = [];
   log: Log | null = null;
-
-  circleSize = 1;
 
   async load() {
     this.playerSprite = await Sprite.load(
@@ -61,6 +68,23 @@ export class MineScene implements IScene {
       new URL("/assets/data/mine-levels/1.json", import.meta.url).href
     ).then((response) => response.json());
 
+    // Load audio
+    this.blockStartFallAudio = new Howl({
+      src: [new URL("/assets/audio/block-gravity.wav", import.meta.url).href],
+    }).load();
+    this.blockLandedAudio = new Howl({
+      src: [new URL("/assets/audio/block-land.wav", import.meta.url).href],
+    }).load();
+    this.blockMinedAudio = new Howl({
+      src: [new URL("/assets/audio/pickaxe.wav", import.meta.url).href],
+    }).load();
+    this.playerJumpAudio = new Howl({
+      src: [new URL("/assets/audio/jump.wav", import.meta.url).href],
+    }).load();
+    this.playerWalkAudio = new Howl({
+      src: [new URL("/assets/audio/walk.wav", import.meta.url).href],
+    }).load();
+
     for (let i = 0; i < level1.blocks.length; i++) {
       const x = (i % level1.meta.width) * 32;
       const y = Math.floor(i / level1.meta.width) * 32;
@@ -82,6 +106,68 @@ export class MineScene implements IScene {
       setTimeout(() => {
         Game.instance.switchScene(new DeathScene());
       }, 1000);
+    });
+
+    Game.instance.events.subscribe("block-start-fall", () => {
+      this.blockStartFallAudio?.play();
+    });
+
+    Game.instance.events.subscribe("block-landed", () => {
+      this.blockLandedAudio?.play();
+    });
+
+    Game.instance.events.subscribe("block-mined", () => {
+      this.blockMinedAudio?.rate(randomBetween(0.95, 1.05));
+      this.blockMinedAudio?.play();
+    });
+
+    Game.instance.events.subscribe("player-start-mine-block", () => {
+      this.blockMinedAudio?.rate(randomBetween(0.95, 1.05));
+      this.blockMinedAudio?.play();
+    });
+
+    Game.instance.events.subscribe("player-jump", () => {
+      this.playerJumpAudio?.volume(0.4);
+      this.playerJumpAudio?.play();
+    });
+
+    Game.instance.events.subscribe("player-walk", () => {
+      this.playerWalkAudio?.volume(0.2);
+      this.playerWalkAudio?.rate(randomBetween(1.3, 1.35));
+      this.playerWalkAudio?.play();
+    });
+
+    Game.instance.events.subscribe("block-destroyed", () => {
+      this.blockMinedAudio?.rate(1.2);
+      this.blockMinedAudio?.play();
+    });
+
+    Game.instance.events.subscribe("block-clicked", ({ block }) => {
+      console.log("Block clicked:", block);
+      if (block.type === BlockType.TREASURE_CHEST) {
+        Game.instance.switchScene(new WinScene());
+        setTimeout(() => {
+          new Howl({
+            src: [new URL("/assets/audio/select.wav", import.meta.url).href],
+            volume: 0.5,
+          })
+            .load()
+            .play();
+        }, 1);
+        return;
+      }
+      if (block.type === BlockType.EXIT) {
+        Game.instance.switchScene(new MainMenuScene());
+        setTimeout(() => {
+          new Howl({
+            src: [new URL("/assets/audio/select.wav", import.meta.url).href],
+            volume: 0.5,
+          })
+            .load()
+            .play();
+        }, 1);
+        return;
+      }
     });
   }
 
@@ -165,9 +251,15 @@ export class MineScene implements IScene {
     context.fillStyle = Colors.BLACK;
     context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 
+    for (const block of this.blocks) {
+      if (!block.isIntangible) continue;
+      block.draw(context);
+    }
+
     this.playerEntity.draw(context, deltaTime);
 
     for (const block of this.blocks) {
+      if (block.isIntangible) continue;
       block.draw(context);
     }
 

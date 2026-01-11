@@ -63,8 +63,6 @@ export class BlockMineParticleEmitter extends ParticleEmitter {
         ? (this.speed *= 1.5)
         : (this.speed *= 1);
 
-      console.log(this.speed)
-
       const speed =
         this.speed +
         randomBetween(-this.sparkSpeedVariance, this.sparkSpeedVariance);

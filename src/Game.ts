@@ -97,6 +97,8 @@ export class Game {
     this.camera.centerY = this.camera.height / 2;
 
     this.idealRefreshRate = await this.measureIdealRefreshRate();
+
+    Howler.volume(0.5);
   }
 
   setDefaultFontSprite(fontSprite: Sprite) {
@@ -104,10 +106,12 @@ export class Game {
   }
 
   switchScene(scene: IScene) {
+    Howler.unload();
     this.#currentScene?.destroy();
     this.#particles.reset();
-    this.#currentScene = scene;
-    this.#currentScene.load();
+    scene.load().then(() => {
+      this.loadScene(scene);
+    });
   }
 
   loadScene(scene: IScene | null) {

@@ -5,7 +5,7 @@ import { Sprite } from "../../Sprite";
 import { drawText } from "../../util/drawText";
 import { MineScene } from "../mine-scene/MineScene";
 
-export class MainMenuScene implements IScene {
+export class WinScene implements IScene {
   public transitionsSprite: Sprite | null = null;
   public selectAudio: Howl | null = null;
 
@@ -37,7 +37,16 @@ export class MainMenuScene implements IScene {
     drawText(
       context,
       Game.instance.defaultFontSprite,
-      "Enter to start",
+      "you found the treasure!\n      Congratulations!",
+      Game.instance.camera.centerX - 8,
+      Game.instance.camera.height - 96,
+      true
+    );
+
+    drawText(
+      context,
+      Game.instance.defaultFontSprite,
+      "Enter to restart",
       Game.instance.camera.centerX,
       Game.instance.camera.height - 32,
       true

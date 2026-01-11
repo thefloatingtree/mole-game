@@ -7,6 +7,8 @@ export const BlockType = {
     IRON_ORE: 4,
     EMERALD_ORE: 5,
     DIAMOND_ORE: 6,
+    TREASURE_CHEST: 9,
+    EXIT: 10,
     BEDROCK1: 11,
     BEDROCK2: 12,
     BEDROCK3: 13,
