@@ -97,7 +97,7 @@ export class MineScenePlayer extends Entity {
 
   addItemToInventory(itemType: ItemType, quantity: number): void {
     const getQuantity = () => {
-      if (!this.upgrades.hasLuckyCharm) return 1;
+      if (!this.upgrades.hasLuckyCharm) return quantity;
       return randomAtRate([
         { value: 1, rate: 5 },
         { value: 2, rate: 2 },

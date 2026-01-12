@@ -16,7 +16,7 @@ export class WinScene implements IScene {
     );
   }
 
-  update(deltaTime: number): void {
+  update(_deltaTime: number): void {
     if (Game.instance.input.isPressed("enter")) {
       setTimeout(() => {
         new Howl({

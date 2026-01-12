@@ -14,15 +14,7 @@ import { Log } from "./Log";
 import { MineScenePlayer } from "./MineScenePlayer";
 import { ShopScene } from "../shop-scene/ShopScene";
 import { lerp } from "../../util/lerp";
-
-type Level = {
-  meta: {
-    width: number;
-    height: number;
-    baseLevelTimeInSeconds: number;
-  };
-  blocks: BlockType[];
-};
+import { LevelData } from "./constants/LevelData";
 
 export class MineScene implements IScene {
   readonly cameraFollowSpeed = 0.005;
@@ -67,6 +59,8 @@ export class MineScene implements IScene {
     this.playerLanternLevel =
       Game.instance.state.get<number>("lantern-level") || 9;
 
+    const level = LevelData[this.levelIndex % LevelData.length];
+
     this.playerSprite = await Sprite.load(
       new URL("/assets/sprites/player-sprite.png", import.meta.url).href,
       new URL("/assets/sprites/player-sprite.json", import.meta.url).href
@@ -88,22 +82,13 @@ export class MineScene implements IScene {
       new URL("/assets/sprites/lantern-sprite.json", import.meta.url).href
     );
 
-    // Load level data
-    const level1: Level = await fetch(
-      new URL(
-        // Had to use string concatenation here for some reason ???
-        "/assets/data/mine-levels/" + this.levelIndex.toString() + ".json",
-        import.meta.url
-      ).href
-    ).then((response) => response.json());
-
     const lanternUpgradeDuration = lerp(
       0,
       60 * 1000,
       (this.playerLanternLevel - 1) / 9
     ); // Up to +60s for max lantern level
     this.levelTimeInMilliseconds =
-      level1.meta.baseLevelTimeInSeconds * 1000 + lanternUpgradeDuration;
+      level.meta.baseLevelTimeInSeconds * 1000 + lanternUpgradeDuration;
     this.maxLevelTimeInMilliseconds = this.levelTimeInMilliseconds;
 
     // Load audio
@@ -131,10 +116,10 @@ export class MineScene implements IScene {
 
     this.playerEntity.init();
 
-    for (let i = 0; i < level1.blocks.length; i++) {
-      const x = (i % level1.meta.width) * 32;
-      const y = Math.floor(i / level1.meta.width) * 32;
-      const blockType = level1.blocks[i];
+    for (let i = 0; i < level.blocks.length; i++) {
+      const x = (i % level.meta.width) * 32;
+      const y = Math.floor(i / level.meta.width) * 32;
+      const blockType = level.blocks[i];
 
       if (blockType === BlockType.PLAYER_START) {
         this.playerEntity.position.x = x;
@@ -226,9 +211,7 @@ export class MineScene implements IScene {
     if (this.playerLanternLevel > 1) {
       Game.instance.events.dispatch(
         "log-message",
-        `+${Math.floor(
-          lanternUpgradeDuration / 1000
-        )} seconds`,
+        `+${Math.floor(lanternUpgradeDuration / 1000)} seconds`,
         { iconIndex: "11" }
       );
     }

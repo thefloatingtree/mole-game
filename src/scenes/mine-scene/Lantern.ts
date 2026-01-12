@@ -167,7 +167,7 @@ export class Lantern extends Entity {
     this.position.y += (this.targetPosition.y - this.position.y) * this.speed;
   }
 
-  draw(context: CanvasRenderingContext2D, deltaTime: number): void {
+  draw(context: CanvasRenderingContext2D, _deltaTime: number): void {
     if (this.sizes[this.currentSizeIndex] === null) {
       // Fully cover up canvas to simulate lantern going out
       context.beginPath();

@@ -60,9 +60,9 @@ export class Log extends Entity {
     );
   }
 
-  update(deltaTime: number): void {}
+  update(_deltaTime: number): void {}
 
-  draw(context: CanvasRenderingContext2D, deltaTime: number): void {
+  draw(context: CanvasRenderingContext2D, _deltaTime: number): void {
     drawText(
       context,
       Game.instance.defaultFontSprite,
