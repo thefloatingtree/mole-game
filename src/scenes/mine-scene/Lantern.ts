@@ -165,10 +165,6 @@ export class Lantern extends Entity {
 
     this.position.x += (this.targetPosition.x - this.position.x) * this.speed;
     this.position.y += (this.targetPosition.y - this.position.y) * this.speed;
-
-    if (Game.instance.input.isPressed("t")) {
-      this.currentSizeIndex = (this.currentSizeIndex + 1) % this.sizes.length;
-    }
   }
 
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {

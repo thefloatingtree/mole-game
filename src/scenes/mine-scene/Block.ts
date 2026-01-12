@@ -44,10 +44,7 @@ export class Block extends Entity {
   > = {
     [BlockType.PLAYER_START]: null,
     [BlockType.AIR]: null,
-    [BlockType.DIRT]: {
-      type: ItemType.DIRT,
-      quantity: 1,
-    },
+    [BlockType.DIRT]: null,
     [BlockType.STONE]: null,
     [BlockType.COAL_ORE]: {
       type: ItemType.COAL,
@@ -144,7 +141,8 @@ export class Block extends Entity {
     type: ItemType;
     quantity: number;
   } | null {
-    if (!this.isInteractable || this.shouldDestroy || this.isClickable) return null;
+    if (!this.isInteractable || this.shouldDestroy || this.isClickable)
+      return null;
     this.durability -= amount;
     if (this.durability <= 0) {
       this.onBlockDestroyed();
@@ -212,7 +210,9 @@ export class Block extends Entity {
     Game.instance.particles.addEmitter(
       new BlockDestroyParticleEmitter(
         this.collisionBox,
-        this.scene.blockEntities.filter((block) => block.id !== this.id && !block.isIntangible),
+        this.scene.blockEntities.filter(
+          (block) => block.id !== this.id && !block.isIntangible
+        ),
         this.type === BlockType.STONE
       )
     );
@@ -359,7 +359,11 @@ export class Block extends Entity {
         this.cameraPosition.x,
         this.cameraPosition.y
       );
-    } else if (this.isSelected && this.isBeingMined) {
+    } else if (
+      this.isSelected &&
+      this.isBeingMined &&
+      this.durability === this.maxDurability
+    ) {
       this.scene.iconSprite?.drawFrame(
         context,
         "0",

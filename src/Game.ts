@@ -21,7 +21,7 @@ export class Game {
   #state = new State();
   #particles = new Particles();
   #defaultFontSprite: Sprite | null = null;
-  #deferDrawRequests: (() => void)[] = [];
+  #deferDrawRequests: { callback: () => void; isDebugDraw: boolean }[] = [];
 
   public camera = {
     x: 0,
@@ -35,6 +35,7 @@ export class Game {
   };
   public frameCounter = 0;
   public idealRefreshRate: number = 60;
+  public timeSinceStart: number = 0;
 
   constructor() {}
 
@@ -98,7 +99,7 @@ export class Game {
 
     this.idealRefreshRate = await this.measureIdealRefreshRate();
 
-    Howler.volume(0.5);
+    Howler.volume(0.4);
   }
 
   setDefaultFontSprite(fontSprite: Sprite) {
@@ -107,6 +108,10 @@ export class Game {
 
   switchScene(scene: IScene) {
     Howler.unload();
+    this.camera.x = 0;
+    this.camera.y = 0;
+    this.camera.xOffset = 0;
+    this.camera.yOffset = 0;
     this.#currentScene?.destroy();
     this.#particles.reset();
     scene.load().then(() => {
@@ -138,6 +143,8 @@ export class Game {
 
       let deltaTime = currentTime - this.#lastFrameTime;
 
+      this.timeSinceStart += deltaTime;
+
       // If deltaTime is too high, set it to ideal frame time to avoid large jumps
       // Happens when the tab is inactive, etc.
       if (deltaTime > 100) deltaTime = 1000 / this.idealRefreshRate;
@@ -151,15 +158,27 @@ export class Game {
         this.#currentScene.update(deltaTime);
         this.#currentScene.draw(this.context, deltaTime);
         this.#particles.draw(this.context, deltaTime);
-        this.#deferDrawRequests.forEach((drawFunction) => drawFunction());
+        // Sort debug draw requests to the end
+        const debugDraws = this.#deferDrawRequests.filter(
+          (req) => req.isDebugDraw
+        );
+        const normalDraws = this.#deferDrawRequests.filter(
+          (req) => !req.isDebugDraw
+        );
+        for (const drawRequest of [...normalDraws, ...debugDraws]) {
+          drawRequest.callback();
+        }
         this.#deferDrawRequests = [];
       }
       this.loop();
     });
   }
 
-  deferDraw(drawFunction: () => void) {
-    this.#deferDrawRequests.push(drawFunction);
+  deferDraw(drawFunction: () => void, isDebugDraw: boolean = false) {
+    this.#deferDrawRequests.push({
+      callback: drawFunction,
+      isDebugDraw: isDebugDraw,
+    });
   }
 
   private async measureIdealRefreshRate() {

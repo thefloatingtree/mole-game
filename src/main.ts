@@ -1,5 +1,6 @@
 import { Game } from "./Game";
 import { MainMenuScene } from "./scenes/main-menu-scene/MainMenuScene";
+import { ShopScene } from "./scenes/shop-scene/ShopScene";
 import { Sprite } from "./Sprite";
 
 async function main() {

@@ -81,7 +81,7 @@ export function drawDebugRect(
       Math.round(box.x - Game.instance.camera.x),
       Math.round(box.y - Game.instance.camera.y)
     );
-  });
+  }, true);
 }
 
 export function drawDebugRectOverlay(
@@ -173,7 +173,7 @@ export function drawDebugText(text: string, x: number, y: number) {
       Math.round(x - Game.instance.camera.x),
       Math.round(y - Game.instance.camera.y)
     );
-  });
+  }, true);
 }
 
 export function drawDebugTextOverlay(text: string, x: number, y: number) {
@@ -187,5 +187,5 @@ export function drawDebugTextOverlay(text: string, x: number, y: number) {
       Math.round(x),
       Math.round(y)
     );
-  });
+  }, true);
 }

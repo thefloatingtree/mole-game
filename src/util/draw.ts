@@ -173,3 +173,65 @@ export function drawCircle(
     Math.round(startY - camY)
   );
 }
+
+export function drawRect(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fillColor: Color | null,
+  strokeColor: Color | null = null
+) {
+  const camX = Game.instance.camera.x;
+  const camY = Game.instance.camera.y;
+
+  const imageData = context.getImageData(
+    Math.round(x - camX),
+    Math.round(y - camY),
+    Math.round(width),
+    Math.round(height)
+  );
+  const data = imageData.data;
+
+  const fillRgb = fillColor ? hexToRgb(fillColor) : null;
+  const strokeRgb = strokeColor ? hexToRgb(strokeColor) : null;
+
+  const setPixelRgb = (
+    px: number,
+    py: number,
+    r: number,
+    g: number,
+    b: number
+  ) => {
+    const localX = px;
+    const localY = py;
+    if (localX < 0 || localX >= width || localY < 0 || localY >= height) return;
+    const idx = (localY * width + localX) * 4;
+    data[idx] = r;
+    data[idx + 1] = g;
+    data[idx + 2] = b;
+    data[idx + 3] = 255;
+  };
+
+  if (fillRgb) {
+    for (let py = 0; py < height; py++) {
+      for (let px = 0; px < width; px++) {
+        setPixelRgb(px, py, fillRgb.r, fillRgb.g, fillRgb.b);
+      }
+    }
+  }
+
+  if (strokeRgb) {
+    for (let px = 0; px < width; px++) {
+      setPixelRgb(px, 0, strokeRgb.r, strokeRgb.g, strokeRgb.b);
+      setPixelRgb(px, height - 1, strokeRgb.r, strokeRgb.g, strokeRgb.b);
+    }
+    for (let py = 0; py < height; py++) {
+      setPixelRgb(0, py, strokeRgb.r, strokeRgb.g, strokeRgb.b);
+      setPixelRgb(width - 1, py, strokeRgb.r, strokeRgb.g, strokeRgb.b);
+    }
+  }
+  
+  context.putImageData(imageData, Math.round(x - camX), Math.round(y - camY));
+}

@@ -1,21 +1,15 @@
 import { Entity } from "../../Entity";
 import { Game } from "../../Game";
 import { checkCollisionAABB, resolveCollisionAABB } from "../../util/collision";
-import {
-  DebugColor,
-  drawDebugRect,
-  drawDebugTextOverlay,
-} from "../../util/drawDebug";
+import { DebugColor, drawDebugRect } from "../../util/drawDebug";
+import { lerp } from "../../util/lerp";
+import { randomAtRate } from "../../util/random";
 import type { MineScene } from "./MineScene";
 import type { ItemType } from "./constants/ItemType";
 
 export class MineScenePlayer extends Entity {
-  readonly speed = 0.05;
-  readonly jumpSpeed = 0.3;
   readonly gravity = 0.001;
 
-  readonly mineTickTime = 500;
-  readonly mineStrength = 1;
   mineDirection: "horizontal" | "down" | "up" = "horizontal";
 
   inventory: Map<ItemType, { type: ItemType; quantity: number }> = new Map();
@@ -31,8 +25,36 @@ export class MineScenePlayer extends Entity {
 
   isDead = false;
 
+  upgrades = {
+    pickaxeLevel: 1,
+    hasBoots: false,
+    hasLuckyCharm: false,
+  };
+  mineTickTime = 500;
+  mineStrength = 1;
+  speed = 0.03;
+  jumpSpeed = 0.3;
+
   constructor(private scene: MineScene) {
     super();
+  }
+
+  init() {
+    // Load upgrades
+    this.upgrades.pickaxeLevel =
+      Game.instance.state.get<number>("pickaxe-level") || 9;
+    this.upgrades.hasBoots =
+      Game.instance.state.get<boolean>("has-boots") || true;
+    this.upgrades.hasLuckyCharm =
+      Game.instance.state.get<boolean>("has-lucky-charm") || true;
+
+    // Apply upgrades
+    this.mineTickTime = lerp(500, 200, (this.upgrades.pickaxeLevel - 1) / 9);
+    this.mineStrength = lerp(1, 5, (this.upgrades.pickaxeLevel - 1) / 9);
+    if (this.upgrades.hasBoots) {
+      this.speed *= 1.7;
+      this.jumpSpeed *= 1.1;
+    }
   }
 
   public get collisionBox() {
@@ -58,7 +80,7 @@ export class MineScenePlayer extends Entity {
 
     if (this.mineDirection === "up") {
       return {
-        x: this.position.x + 8,
+        x: this.position.x + 8 + this.isFacing.x * 3,
         y: this.position.y - 24,
         width: 1,
         height: 16,
@@ -74,28 +96,45 @@ export class MineScenePlayer extends Entity {
   }
 
   addItemToInventory(itemType: ItemType, quantity: number): void {
+    const getQuantity = () => {
+      if (!this.upgrades.hasLuckyCharm) return 1;
+      return randomAtRate([
+        { value: 1, rate: 5 },
+        { value: 2, rate: 2 },
+        { value: 3, rate: 1 },
+      ]);
+    };
+    const quantityToAdd = getQuantity();
+
     const existingItem = this.inventory.get(itemType);
     if (existingItem) {
       this.inventory.set(itemType, {
         type: itemType,
-        quantity: existingItem.quantity + quantity,
+        quantity: existingItem.quantity + quantityToAdd,
       });
     } else {
-      this.inventory.set(itemType, { type: itemType, quantity });
+      this.inventory.set(itemType, { type: itemType, quantity: quantityToAdd });
     }
 
     Game.instance.state.set(
       "player-inventory",
       Object.fromEntries(this.inventory)
     );
-    Game.instance.events.dispatch("log-message", `+${quantity} ${itemType}`);
+    Game.instance.events.dispatch(
+      "log-message",
+      `+${quantityToAdd} ${itemType}`,
+      quantityToAdd > 1 ? { iconIndex: "13" } : { iconIndex: null }
+    );
   }
 
   resolveCollisionWithEnvironment(): void {
     let anyBottomCollision = false;
     let selectedBlock = null;
     for (const block of this.scene.blockEntities) {
-      if (!block.isIntangible && checkCollisionAABB(this.collisionBox, block.collisionBox)) {
+      if (
+        !block.isIntangible &&
+        checkCollisionAABB(this.collisionBox, block.collisionBox)
+      ) {
         const resolved = resolveCollisionAABB(
           this.collisionBox,
           block.collisionBox
@@ -157,10 +196,16 @@ export class MineScenePlayer extends Entity {
 
     if (!Game.instance.input.isDown("e")) return;
 
-    const selectedBlock = this.scene.blockEntities.find((block) => block.isSelected);
+    const selectedBlock = this.scene.blockEntities.find(
+      (block) => block.isSelected
+    );
     if (!selectedBlock) return;
 
-    if (!selectedBlock.isBeingMined && this.miningTimer === null && !this.isMoving) {
+    if (
+      !selectedBlock.isBeingMined &&
+      this.miningTimer === null &&
+      !this.isMoving
+    ) {
       Game.instance.events.dispatch("player-start-mine-block", {
         block: selectedBlock,
       });
@@ -183,7 +228,9 @@ export class MineScenePlayer extends Entity {
     this.isMoving = false;
 
     if (Game.instance.input.isPressed("b")) {
-      this.scene.blockEntities.forEach((block) => (block.shouldApplyGravity = true));
+      this.scene.blockEntities.forEach(
+        (block) => (block.shouldApplyGravity = true)
+      );
     }
 
     if (Game.instance.input.isReleased("spacebar")) {
@@ -278,9 +325,5 @@ export class MineScenePlayer extends Entity {
 
     drawDebugRect(this.collisionBox, DebugColor.BLUE);
     drawDebugRect(this.selectionCollisionBox, DebugColor.GREEN);
-
-    // Draw player x/y position for debugging
-    drawDebugTextOverlay(this.position.x.toString(), 10, 10);
-    drawDebugTextOverlay(this.position.y.toString(), 10, 20);
   }
 }

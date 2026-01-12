@@ -6,7 +6,6 @@ import { Sprite } from "../../Sprite";
 import { drawText } from "../../util/drawText";
 import { randomBetween } from "../../util/random";
 import { DeathScene } from "../death-scene/DeathScene";
-import { MainMenuScene } from "../main-menu-scene/MainMenuScene";
 import { WinScene } from "../win-scene/WinScene";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
@@ -14,6 +13,7 @@ import { Lantern } from "./Lantern";
 import { Log } from "./Log";
 import { MineScenePlayer } from "./MineScenePlayer";
 import { ShopScene } from "../shop-scene/ShopScene";
+import { lerp } from "../../util/lerp";
 
 type Level = {
   meta: {
@@ -25,11 +25,11 @@ type Level = {
 };
 
 export class MineScene implements IScene {
-  readonly cameraFollowMargin = 60;
   readonly cameraFollowSpeed = 0.005;
-  readonly cameraLookAhead = 15;
+  readonly cameraLookAheadX = 15;
+  readonly cameraLookAheadY = 24;
+  readonly cameraHorizontalDeadZone = 80;
 
-  #cameraVelocity = { x: 0, y: 0 };
   #cameraTarget = { x: 0, y: 0 };
 
   public cameraShakeIntensity = 0;
@@ -43,6 +43,7 @@ export class MineScene implements IScene {
   public blockStartFallAudio: Howl | null = null;
   public blockLandedAudio: Howl | null = null;
   public blockMinedAudio: Howl | null = null;
+  public blockBreakAudio: Howl | null = null;
   public playerJumpAudio: Howl | null = null;
   public playerWalkAudio: Howl | null = null;
   public playerLanternExtinguishAudio: Howl | null = null;
@@ -57,7 +58,15 @@ export class MineScene implements IScene {
   blockEntities: Block[] = [];
   logEntity: Log | null = null;
 
+  levelIndex = 0;
+  playerLanternLevel = 1;
+  restartHoldTime = 0;
+
   async load() {
+    this.levelIndex = Game.instance.state.get("level-index") || 0;
+    this.playerLanternLevel =
+      Game.instance.state.get<number>("lantern-level") || 9;
+
     this.playerSprite = await Sprite.load(
       new URL("/assets/sprites/player-sprite.png", import.meta.url).href,
       new URL("/assets/sprites/player-sprite.json", import.meta.url).href
@@ -81,10 +90,20 @@ export class MineScene implements IScene {
 
     // Load level data
     const level1: Level = await fetch(
-      new URL("/assets/data/mine-levels/1.json", import.meta.url).href
+      new URL(
+        // Had to use string concatenation here for some reason ???
+        "/assets/data/mine-levels/" + this.levelIndex.toString() + ".json",
+        import.meta.url
+      ).href
     ).then((response) => response.json());
 
-    this.levelTimeInMilliseconds = level1.meta.baseLevelTimeInSeconds * 1000;
+    const lanternUpgradeDuration = lerp(
+      0,
+      60 * 1000,
+      (this.playerLanternLevel - 1) / 9
+    ); // Up to +60s for max lantern level
+    this.levelTimeInMilliseconds =
+      level1.meta.baseLevelTimeInSeconds * 1000 + lanternUpgradeDuration;
     this.maxLevelTimeInMilliseconds = this.levelTimeInMilliseconds;
 
     // Load audio
@@ -97,6 +116,9 @@ export class MineScene implements IScene {
     this.blockMinedAudio = new Howl({
       src: [new URL("/assets/audio/pickaxe.wav", import.meta.url).href],
     }).load();
+    this.blockBreakAudio = new Howl({
+      src: [new URL("/assets/audio/block-break.wav", import.meta.url).href],
+    }).load();
     this.playerJumpAudio = new Howl({
       src: [new URL("/assets/audio/jump.wav", import.meta.url).href],
     }).load();
@@ -106,6 +128,8 @@ export class MineScene implements IScene {
     this.playerLanternExtinguishAudio = new Howl({
       src: [new URL("/assets/audio/extinguish.wav", import.meta.url).href],
     }).load();
+
+    this.playerEntity.init();
 
     for (let i = 0; i < level1.blocks.length; i++) {
       const x = (i % level1.meta.width) * 32;
@@ -121,7 +145,7 @@ export class MineScene implements IScene {
       this.blockEntities.push(new Block(this, { x, y }, blockType));
     }
 
-    this.logEntity = new Log({ x: 8, y: 165 });
+    this.logEntity = new Log(this, { x: 8, y: 165 });
     this.logEntity.init();
 
     this.playerLanternEntity.init();
@@ -176,6 +200,7 @@ export class MineScene implements IScene {
     Game.instance.events.subscribe("block-destroyed", () => {
       this.blockMinedAudio?.rate(1.2);
       this.blockMinedAudio?.play();
+      this.blockBreakAudio?.play();
     });
 
     Game.instance.events.subscribe("block-clicked", ({ block }) => {
@@ -193,18 +218,33 @@ export class MineScene implements IScene {
         return;
       }
       if (block.type === BlockType.EXIT) {
-        Game.instance.switchScene(new ShopScene());
-        setTimeout(() => {
-          new Howl({
-            src: [new URL("/assets/audio/select.wav", import.meta.url).href],
-            volume: 0.5,
-          })
-            .load()
-            .play();
-        }, 1);
+        this.exitLevel();
         return;
       }
     });
+
+    if (this.playerLanternLevel > 1) {
+      Game.instance.events.dispatch(
+        "log-message",
+        `+${Math.floor(
+          lanternUpgradeDuration / 1000
+        )} seconds`,
+        { iconIndex: "11" }
+      );
+    }
+  }
+
+  exitLevel() {
+    Game.instance.state.set("level-index", this.levelIndex + 1);
+    Game.instance.switchScene(new ShopScene());
+    setTimeout(() => {
+      new Howl({
+        src: [new URL("/assets/audio/select.wav", import.meta.url).href],
+        volume: 0.5,
+      })
+        .load()
+        .play();
+    }, 1);
   }
 
   performShakeCamera() {
@@ -225,44 +265,44 @@ export class MineScene implements IScene {
   }
 
   performFollowCamera(deltaTime: number) {
-    // Adjust camera to follow player if gets too close
     const camera = Game.instance.camera;
     const player = this.playerEntity;
-    const margin = this.cameraFollowMargin;
-    const lookAhead = this.cameraLookAhead;
 
-    // Determine target position for camera based on player position, facing direction, and lookahead distance
-    // Instead of centering on player, offset by lookAhead in facing direction
-    this.#cameraTarget.x =
+    // Center camera on player
+    const centerX =
       player.position.x + player.collisionBox.width / 2 - camera.width / 2;
-    this.#cameraTarget.y =
+    const centerY =
       player.position.y + player.collisionBox.height / 2 - camera.height / 2;
 
-    this.#cameraTarget.x += lookAhead * player.isFacing.x;
-
-    // If target is outside margin, move camera towards target
-    if (this.#cameraTarget.x - camera.x > margin) {
-      this.#cameraVelocity.x =
-        (this.#cameraTarget.x - camera.x - margin) * this.cameraFollowSpeed;
-    } else if (this.#cameraTarget.x - camera.x < -margin) {
-      this.#cameraVelocity.x =
-        (this.#cameraTarget.x - camera.x + margin) * this.cameraFollowSpeed;
-    } else {
-      this.#cameraVelocity.x = 0;
+    // Apply look-ahead based on facing and mining direction
+    const lookAheadX = this.cameraLookAheadX * player.isFacing.x;
+    let lookAheadY = 0;
+    if (player.mineDirection === "down") {
+      lookAheadY = this.cameraLookAheadY;
+    } else if (player.mineDirection === "up") {
+      lookAheadY = -this.cameraLookAheadY;
     }
 
-    if (this.#cameraTarget.y - camera.y > margin) {
-      this.#cameraVelocity.y =
-        (this.#cameraTarget.y - camera.y - margin) * this.cameraFollowSpeed;
-    } else if (this.#cameraTarget.y - camera.y < -margin) {
-      this.#cameraVelocity.y =
-        (this.#cameraTarget.y - camera.y + margin) * this.cameraFollowSpeed;
+    // Calculate ideal target position
+    const idealX = centerX + lookAheadX;
+    const idealY = centerY + lookAheadY;
+
+    // Only update horizontal target if player is outside the padding zone
+    const deltaX = idealX - camera.x;
+    if (Math.abs(deltaX) > this.cameraHorizontalDeadZone) {
+      const sign = deltaX > 0 ? 1 : -1;
+      this.#cameraTarget.x = idealX - sign * this.cameraHorizontalDeadZone;
     } else {
-      this.#cameraVelocity.y = 0;
+      this.#cameraTarget.x = camera.x;
     }
 
-    camera.x += this.#cameraVelocity.x * deltaTime;
-    camera.y += this.#cameraVelocity.y * deltaTime;
+    // Vertical always follows smoothly
+    this.#cameraTarget.y = idealY;
+
+    // Smoothly move camera towards target
+    const speed = this.cameraFollowSpeed * deltaTime;
+    camera.x += (this.#cameraTarget.x - camera.x) * speed;
+    camera.y += (this.#cameraTarget.y - camera.y) * speed;
   }
 
   update(deltaTime: number): void {
@@ -287,6 +327,18 @@ export class MineScene implements IScene {
       if (block.shouldDestroy) {
         this.blockEntities.splice(this.blockEntities.indexOf(block), 1);
       }
+    }
+
+    // Hold R to restart
+    if (Game.instance.input.isDown("r")) {
+      this.restartHoldTime += deltaTime;
+      if (this.restartHoldTime >= 1000) {
+        this.restartHoldTime = 0;
+
+        Game.instance.switchScene(new MineScene());
+      }
+    } else {
+      this.restartHoldTime = 0;
     }
   }
 
@@ -340,6 +392,26 @@ export class MineScene implements IScene {
         timeString,
         context.canvas.width - 80,
         10,
+        false
+      );
+
+      const restartProgress = this.restartHoldTime / 1000;
+      const numberOfHyphens = lerp(
+        0,
+        "Hold R to Restart".length,
+        restartProgress
+      );
+      const restartString =
+        numberOfHyphens > 0
+          ? "Hold R to Restart\n" + "-".repeat(Math.floor(numberOfHyphens))
+          : "Hold R to Restart";
+
+      drawText(
+        context,
+        Game.instance.defaultFontSprite,
+        restartString,
+        212,
+        context.canvas.height - 8 - 7,
         false
       );
     });

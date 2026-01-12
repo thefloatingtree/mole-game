@@ -37,8 +37,8 @@ export class WinScene implements IScene {
     drawText(
       context,
       Game.instance.defaultFontSprite,
-      "you found the treasure!\n      Congratulations!",
-      Game.instance.camera.centerX - 8,
+      "you found the treasure!\nCongratulations!",
+      Game.instance.camera.centerX,
       Game.instance.camera.height - 96,
       true
     );

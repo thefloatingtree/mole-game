@@ -16,8 +16,8 @@ const realState: RealState = {
 }
 
 window.onkeydown = (e: KeyboardEvent) => {
-    if (e.which == 18)
-        e.preventDefault();
+    if (e.which == 18) e.preventDefault();
+    if (e.which == 9) e.preventDefault();
     realState.keyStates[e.which] = true;
 };
 

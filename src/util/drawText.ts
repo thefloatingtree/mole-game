@@ -5,7 +5,7 @@ export function measureText(text: string): {
   height: number;
 } {
   const { lineWidth, lineHeight } = calculateCharacterPositions(text, 0, 0);
-  
+
   return {
     width: lineWidth,
     height: lineHeight,
@@ -21,11 +21,11 @@ export function drawText(
   y: number,
   centered: boolean = false
 ) {
-  const { positions, lineWidth } = calculateCharacterPositions(text, x, y);
+  const { positions, lineWidths } = calculateCharacterPositions(text, x, y);
 
   const finalPositions = centered
     ? positions.map((pos) => ({
-        x: pos.x - lineWidth / 2,
+        x: pos.x - lineWidths[pos.line] / 2,
         y: pos.y,
         frameIndex: pos.frameIndex,
       }))
@@ -44,11 +44,18 @@ export function calculateCharacterPositions(
   let line = 0;
   let charInLine = 0;
   let lineLengthAccumulator = 0;
-  const positions: { x: number; y: number; frameIndex: number }[] = [];
+  const lineWidths: number[] = [];
+  const positions: {
+    x: number;
+    y: number;
+    frameIndex: number;
+    line: number;
+  }[] = [];
   for (let i = 0; i < text.length; i++) {
     const char = text[i].toUpperCase();
 
     if (char === "\n") {
+      lineWidths[line] = lineLengthAccumulator;
       line++;
       charInLine = 0;
       lineLengthAccumulator = 0;
@@ -78,6 +85,12 @@ export function calculateCharacterPositions(
       frameIndex = 42; // Hyphen character
     } else if (char === ":") {
       frameIndex = 43; // Colon character
+    } else if (char === "$") {
+      frameIndex = 44; // Dollar sign character
+    } else if (char === "[") {
+      frameIndex = 45; // Left bracket character
+    } else if (char === "]") {
+      frameIndex = 46; // Right bracket character
     } else {
       continue; // Skip unsupported characters
     }
@@ -103,15 +116,20 @@ export function calculateCharacterPositions(
       x: x + lineLengthAccumulator + xOffset,
       y: y + line * 8,
       frameIndex: frameIndex,
+      line: line,
     });
 
     lineLengthAccumulator += characterWidth;
     charInLine++;
   }
 
+  // Store the final line's width
+  lineWidths[line] = lineLengthAccumulator;
+
   return {
     positions,
-    lineWidth: lineLengthAccumulator,
+    lineWidths,
+    lineWidth: Math.max(...lineWidths),
     lineHeight: (line + 1) * 8,
   };
 }
