@@ -22,6 +22,7 @@ export class Game {
   #particles = new Particles();
   #defaultFontSprite: Sprite | null = null;
   #deferDrawRequests: { callback: () => void; isDebugDraw: boolean }[] = [];
+  #isSwitchingScene: boolean = false;
 
   public camera = {
     x: 0,
@@ -107,6 +108,9 @@ export class Game {
   }
 
   switchScene(scene: IScene) {
+    if (this.#isSwitchingScene) return;
+    this.#isSwitchingScene = true;
+
     Howler.unload();
     this.camera.x = 0;
     this.camera.y = 0;
@@ -116,6 +120,7 @@ export class Game {
     this.#particles.reset();
     scene.load().then(() => {
       this.loadScene(scene);
+      this.#isSwitchingScene = false;
     });
   }
 

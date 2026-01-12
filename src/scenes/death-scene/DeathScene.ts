@@ -20,9 +20,7 @@ export class DeathScene implements IScene {
       src: [new URL("/assets/audio/death.wav", import.meta.url).href],
     }).load();
 
-    if (!this.deathAudio.playing()) {
-      this.deathAudio.play();
-    }
+    this.deathAudio.play();
   }
 
   update(_deltaTime: number): void {
@@ -66,5 +64,8 @@ export class DeathScene implements IScene {
     );
   }
 
-  destroy(): void {}
+  destroy(): void {
+    this.deathAudio?.stop();
+    this.deathAudio?.unload();
+  }
 }
