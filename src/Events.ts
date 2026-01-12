@@ -42,4 +42,8 @@ export class Events {
       }
     }
   }
+
+  reset(): void {
+    this.eventsToSubscribers.clear();
+  }
 }

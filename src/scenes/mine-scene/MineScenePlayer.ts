@@ -9,6 +9,8 @@ import type { ItemType } from "./constants/ItemType";
 
 export class MineScenePlayer extends Entity {
   readonly gravity = 0.001;
+  readonly gravityAtPeakOfJump = 0.0003;
+  readonly gravityWhileNotHoldingJump = 0.002;
 
   mineDirection: "horizontal" | "down" | "up" = "horizontal";
 
@@ -24,6 +26,7 @@ export class MineScenePlayer extends Entity {
   isMoving = false;
 
   isDead = false;
+  isDestroyed = false;
 
   upgrades = {
     pickaxeLevel: 1,
@@ -42,17 +45,17 @@ export class MineScenePlayer extends Entity {
   init() {
     // Load upgrades
     this.upgrades.pickaxeLevel =
-      Game.instance.state.get<number>("pickaxe-level") || 9;
+      Game.instance.state.get<number>("pickaxe-level") || 1;
     this.upgrades.hasBoots =
-      Game.instance.state.get<boolean>("has-boots") || true;
+      Game.instance.state.get<boolean>("has-boots") || false;
     this.upgrades.hasLuckyCharm =
-      Game.instance.state.get<boolean>("has-lucky-charm") || true;
+      Game.instance.state.get<boolean>("has-lucky-charm") || false;
 
     // Apply upgrades
     this.mineTickTime = lerp(500, 200, (this.upgrades.pickaxeLevel - 1) / 9);
     this.mineStrength = lerp(1, 5, (this.upgrades.pickaxeLevel - 1) / 9);
     if (this.upgrades.hasBoots) {
-      this.speed *= 1.7;
+      this.speed *= 1.9;
       this.jumpSpeed *= 1.1;
     }
   }
@@ -223,7 +226,7 @@ export class MineScenePlayer extends Entity {
   }
 
   update(deltaTime: number): void {
-    if (this.isDead) return;
+    if (this.isDead || this.isDestroyed) return;
 
     this.isMoving = false;
 
@@ -270,7 +273,19 @@ export class MineScenePlayer extends Entity {
       this.mineDirection = "horizontal";
     }
 
-    this.velocity.y += this.gravity * deltaTime;
+    
+    const getGravity = () => {
+      const isPeakOfJump = this.isAirborne && this.velocity.y < 0.01 && this.velocity.y > -0.01;
+      if (!Game.instance.input.isDown("spacebar")) {
+        return this.gravityWhileNotHoldingJump;
+      }
+      if (isPeakOfJump) {
+        return this.gravityAtPeakOfJump;
+      }
+      return this.gravity;
+    }
+
+    this.velocity.y += getGravity() * deltaTime;
     this.position.y += this.velocity.y * deltaTime;
 
     this.resolveCollisionWithEnvironment();
@@ -325,5 +340,17 @@ export class MineScenePlayer extends Entity {
 
     drawDebugRect(this.collisionBox, DebugColor.BLUE);
     drawDebugRect(this.selectionCollisionBox, DebugColor.GREEN);
+  }
+
+  destroy(): void {
+    this.isDestroyed = true;
+    if (this.miningTimer) {
+      clearInterval(this.miningTimer);
+      this.miningTimer = null;
+    }
+    if (this.walkingSoundTimer) {
+      clearInterval(this.walkingSoundTimer);
+      this.walkingSoundTimer = null;
+    }
   }
 }

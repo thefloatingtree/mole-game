@@ -667,6 +667,9 @@ export class ShopScene implements IScene {
   update(_deltaTime: number): void {
     this.sellElement?.update();
 
+    Game.instance.camera.x = 0;
+    Game.instance.camera.y = 0;
+
     if (this.sectionSelection === "sell") {
       this.sellCoalElement?.update();
       this.sellIronElement?.update();

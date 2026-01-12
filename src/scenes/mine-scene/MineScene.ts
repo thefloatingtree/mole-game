@@ -15,6 +15,7 @@ import { MineScenePlayer } from "./MineScenePlayer";
 import { ShopScene } from "../shop-scene/ShopScene";
 import { lerp } from "../../util/lerp";
 import { LevelData } from "./constants/LevelData";
+import { drawDebugText } from "../../util/drawDebug";
 
 export class MineScene implements IScene {
   readonly cameraFollowSpeed = 0.005;
@@ -57,7 +58,7 @@ export class MineScene implements IScene {
   async load() {
     this.levelIndex = Game.instance.state.get("level-index") || 0;
     this.playerLanternLevel =
-      Game.instance.state.get<number>("lantern-level") || 9;
+      Game.instance.state.get<number>("lantern-level") || 1;
 
     const level = LevelData[this.levelIndex % LevelData.length];
 
@@ -178,7 +179,7 @@ export class MineScene implements IScene {
 
     Game.instance.events.subscribe("player-walk", () => {
       this.playerWalkAudio?.volume(0.2);
-      this.playerWalkAudio?.rate(randomBetween(1.3, 1.35));
+      this.playerWalkAudio?.rate(randomBetween(1.3, 1.4));
       this.playerWalkAudio?.play();
     });
 
@@ -215,6 +216,14 @@ export class MineScene implements IScene {
         { iconIndex: "11" }
       );
     }
+  }
+
+  getLevelTotalValue(): number {
+    let totalValue = 0;
+    for (const block of this.blockEntities) {
+      totalValue += block.getValue();
+    }
+    return totalValue;
   }
 
   exitLevel() {
@@ -346,9 +355,6 @@ export class MineScene implements IScene {
 
     Game.instance.deferDraw(() => {
       this.playerLanternEntity.draw(context, deltaTime);
-
-      // UI
-      this.logEntity?.draw(context, deltaTime);
       this.transitionsSprite?.drawTiledAnimation(
         context,
         "FadeIn",
@@ -360,6 +366,9 @@ export class MineScene implements IScene {
         false,
         1.25
       );
+
+      // UI
+      this.logEntity?.draw(context, deltaTime);
 
       // Draw lantern timer (1:23 format, top-right corner)
       const totalSeconds = Math.ceil(this.levelTimeInMilliseconds / 1000);
@@ -397,8 +406,23 @@ export class MineScene implements IScene {
         context.canvas.height - 8 - 7,
         false
       );
+
+      // Level indicator (top left corner)
+      drawText(
+        context,
+        Game.instance.defaultFontSprite,
+        `Level ${this.levelIndex + 1}`,
+        10,
+        10,
+        false
+      );
     });
+
+    drawDebugText(`Level Value: $${this.getLevelTotalValue()}`, 0, 0);
   }
 
-  destroy(): void {}
+  destroy(): void {
+    // clear all timeouts/intervals if any
+    this.playerEntity.destroy();
+  }
 }

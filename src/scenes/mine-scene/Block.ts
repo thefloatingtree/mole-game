@@ -3,6 +3,7 @@ import { Game } from "../../Game";
 import { checkCollisionAABB, resolveCollisionAABB } from "../../util/collision";
 import { DebugColor, drawDebugRect } from "../../util/drawDebug";
 import { BlockType } from "./constants/BlockType";
+import { ItemPrice } from "./constants/ItemPrice";
 import { ItemType } from "./constants/ItemType";
 import type { MineScene } from "./MineScene";
 import { BlockDestroyParticleEmitter } from "./particles/BlockDestroyParticleEmitter";
@@ -10,7 +11,7 @@ import { BlockFallingParticleEmitter } from "./particles/BlockFallingParticleEmi
 import { BlockMineParticleEmitter } from "./particles/BlockMineParticleEmitter";
 
 export class Block extends Entity {
-  readonly gravity = 0.005;
+  readonly gravity = 0.003;
 
   private id = crypto.randomUUID();
 
@@ -23,6 +24,7 @@ export class Block extends Entity {
     [BlockType.IRON_ORE]: 9,
     [BlockType.EMERALD_ORE]: 12,
     [BlockType.DIAMOND_ORE]: 18,
+    [BlockType.BASALT]: Infinity,
     [BlockType.TREASURE_CHEST]: Infinity,
     [BlockType.EXIT]: Infinity,
     [BlockType.BEDROCK1]: Infinity,
@@ -62,6 +64,7 @@ export class Block extends Entity {
       type: ItemType.DIAMOND,
       quantity: 1,
     },
+    [BlockType.BASALT]: null,
     [BlockType.TREASURE_CHEST]: null,
     [BlockType.EXIT]: null,
     [BlockType.BEDROCK1]: null,
@@ -106,6 +109,10 @@ export class Block extends Entity {
       this.isInteractable = false;
     }
 
+    if (this.type === BlockType.BASALT) {
+      this.isInteractable = false;
+    }
+
     if (
       this.type === BlockType.TREASURE_CHEST ||
       this.type === BlockType.EXIT
@@ -135,6 +142,13 @@ export class Block extends Entity {
       width: 20,
       height: 8,
     };
+  }
+
+  public getValue() {
+    const drop = this.dropLookup[this.type];
+    if (!drop) return 0;
+    const itemPrice = ItemPrice[drop.type];
+    return itemPrice * drop.quantity;
   }
 
   public mine(amount: number): {

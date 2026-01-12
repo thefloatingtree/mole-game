@@ -1,10 +1,14 @@
 export class State {
+    private static readonly STORAGE_KEY = 'mole-game-state';
     private state: Map<string, any> = new Map();
+
+    constructor() {
+        this.loadFromLocalStorage();
+    }
 
     public set<T>(key: string, value: T): void {
         this.state.set(key, value);
-
-        console.log(JSON.parse(this.serialize()))
+        this.saveToLocalStorage();
     }
 
     public get<T>(key: string): T | undefined {
@@ -17,10 +21,12 @@ export class State {
 
     public delete(key: string): void {
         this.state.delete(key);
+        this.saveToLocalStorage();
     }
 
     public clear(): void {
         this.state.clear();
+        this.saveToLocalStorage();
     }
 
     public serialize(): string {
@@ -39,5 +45,43 @@ export class State {
                 this.state.set(key, obj[key]);
             }
         }
+        this.saveToLocalStorage();
+    }
+
+    private saveToLocalStorage(): void {
+        try {
+            localStorage.setItem(State.STORAGE_KEY, this.serialize());
+        } catch (e) {
+            console.warn('Failed to save state to localStorage:', e);
+        }
+    }
+
+    private loadFromLocalStorage(): void {
+        try {
+            const savedState = localStorage.getItem(State.STORAGE_KEY);
+            if (savedState) {
+                const obj = JSON.parse(savedState);
+                for (const key in obj) {
+                    if (obj.hasOwnProperty(key)) {
+                        this.state.set(key, obj[key]);
+                    }
+                }
+            }
+            console.log(this.state)
+        } catch (e) {
+            console.warn('Failed to load state from localStorage:', e);
+        }
+    }
+
+    public clearLocalStorage(): void {
+        try {
+            localStorage.removeItem(State.STORAGE_KEY);
+        } catch (e) {
+            console.warn('Failed to clear localStorage:', e);
+        }
+    }
+
+    public hasAnyState(): boolean {
+        return this.state.size > 0;
     }
 }

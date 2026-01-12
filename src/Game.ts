@@ -117,7 +117,9 @@ export class Game {
     this.camera.xOffset = 0;
     this.camera.yOffset = 0;
     this.#currentScene?.destroy();
+    this.#currentScene = null;
     this.#particles.reset();
+    this.#events.reset();
     scene.load().then(() => {
       this.loadScene(scene);
       this.#isSwitchingScene = false;
@@ -161,7 +163,7 @@ export class Game {
         this.#animator.update(deltaTime);
         this.#particles.update(deltaTime);
         this.#currentScene.update(deltaTime);
-        this.#currentScene.draw(this.context, deltaTime);
+        this.#currentScene?.draw(this.context, deltaTime);
         this.#particles.draw(this.context, deltaTime);
         // Sort debug draw requests to the end
         const debugDraws = this.#deferDrawRequests.filter(
