@@ -690,11 +690,6 @@ export class ShopScene implements IScene {
   }
 
   draw(context: CanvasRenderingContext2D, _deltaTime: number): void {
-    context.beginPath();
-    context.fillStyle = Colors.BLACK;
-    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-    context.closePath();
-
     this.sellElement?.draw(undefined);
 
     if (this.sectionSelection === "sell") {

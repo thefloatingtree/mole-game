@@ -1,4 +1,5 @@
 import { Animator } from "./Animator";
+import { Colors } from "./constants/Colors";
 import { Events } from "./Events";
 import type { IScene } from "./IScene";
 import { Particles } from "./Particles";
@@ -165,9 +166,7 @@ export class Game {
         return;
       }
 
-      this.#currentScene?.draw(this.context, frameTime);
-      this.#particles.draw(this.context, frameTime);
-
+      // Fixed timestep updates
       while (frameTime > 0) {
         const deltaTime = Math.min(frameTime, (1 / 60) * 1000);
 
@@ -179,6 +178,13 @@ export class Game {
         frameTime -= deltaTime;
         this.timeSinceStart += deltaTime;
       }
+
+      // Clear canvas
+      this.context.fillStyle = Colors.BLACK;
+      this.context.fillRect(0, 0, this.context.canvas.width, this.context.canvas.height);
+
+      this.#currentScene?.draw(this.context, averageFrameTime);
+      this.#particles.draw(this.context, averageFrameTime);
 
       drawDebugTextOverlay(
         fps.toString() + " FPS",

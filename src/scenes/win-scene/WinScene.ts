@@ -1,4 +1,3 @@
-import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
@@ -29,11 +28,6 @@ export class WinScene implements IScene {
   }
 
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {
-    context.beginPath();
-    context.fillStyle = Colors.BLACK;
-    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
-    context.closePath();
-
     drawText(
       context,
       Game.instance.defaultFontSprite,

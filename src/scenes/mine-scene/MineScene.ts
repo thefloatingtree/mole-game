@@ -1,21 +1,20 @@
 import { Howl } from "howler";
-import { Colors } from "../../constants/Colors";
 import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
+import { drawDebugText } from "../../util/drawDebug";
 import { drawText } from "../../util/drawText";
+import { lerp } from "../../util/lerp";
 import { randomBetween } from "../../util/random";
 import { DeathScene } from "../death-scene/DeathScene";
+import { ShopScene } from "../shop-scene/ShopScene";
 import { WinScene } from "../win-scene/WinScene";
 import { Block } from "./Block";
 import { BlockType } from "./constants/BlockType";
+import { LevelData } from "./constants/LevelData";
 import { Lantern } from "./Lantern";
 import { Log } from "./Log";
 import { MineScenePlayer } from "./MineScenePlayer";
-import { ShopScene } from "../shop-scene/ShopScene";
-import { lerp } from "../../util/lerp";
-import { LevelData } from "./constants/LevelData";
-import { drawDebugText } from "../../util/drawDebug";
 
 export class MineScene implements IScene {
   readonly cameraFollowSpeed = 0.005;
@@ -337,9 +336,6 @@ export class MineScene implements IScene {
   draw(context: CanvasRenderingContext2D, deltaTime: number): void {
     this.performFollowCamera(deltaTime);
     this.performShakeCamera();
-
-    context.fillStyle = Colors.BLACK;
-    context.fillRect(0, 0, context.canvas.width, context.canvas.height);
 
     for (const block of this.blockEntities) {
       if (!block.isIntangible) continue;
