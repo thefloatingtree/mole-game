@@ -276,7 +276,7 @@ export class MineScenePlayer extends Entity {
     
     const getGravity = () => {
       const isPeakOfJump = this.isAirborne && this.velocity.y < 0.01 && this.velocity.y > -0.01;
-      if (!Game.instance.input.isDown("spacebar")) {
+      if (!Game.instance.input.isDown("spacebar") && this.isAirborne) {
         return this.gravityWhileNotHoldingJump;
       }
       if (isPeakOfJump) {
