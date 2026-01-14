@@ -4,10 +4,11 @@ import type { IScene } from "./IScene";
 import { Particles } from "./Particles";
 import { Sprite } from "./Sprite";
 import { State } from "./State";
+import { drawDebugTextOverlay } from "./util/drawDebug";
 import { Pinput } from "./util/Pinput";
 
 export class Game {
-  public static readonly drawDebugInfo = true;
+  public static readonly drawDebugInfo = false;
 
   static #instance: Game | null = null;
 
@@ -35,8 +36,9 @@ export class Game {
     centerY: 0,
   };
   public frameCounter = 0;
-  public idealRefreshRate: number = 60;
   public timeSinceStart: number = 0;
+  public frameTimeSamples: number[] = [];
+  public leftOverDeltaTime: number = 0;
 
   constructor() {}
 
@@ -98,8 +100,6 @@ export class Game {
     this.camera.centerX = this.camera.width / 2;
     this.camera.centerY = this.camera.height / 2;
 
-    this.idealRefreshRate = await this.measureIdealRefreshRate();
-
     Howler.volume(0.4);
   }
 
@@ -143,40 +143,61 @@ export class Game {
   }
 
   loop() {
-    requestAnimationFrame((currentTime: number) => {
+    requestAnimationFrame(() => {
       if (!this.#isRunning) return;
-
       this.frameCounter++;
 
-      let deltaTime = currentTime - this.#lastFrameTime;
-
-      this.timeSinceStart += deltaTime;
-
-      // If deltaTime is too high, set it to ideal frame time to avoid large jumps
-      // Happens when the tab is inactive, etc.
-      if (deltaTime > 100) deltaTime = 1000 / this.idealRefreshRate;
-
+      const currentTime = performance.now();
+      let frameTime = currentTime - this.#lastFrameTime;
       this.#lastFrameTime = currentTime;
 
-      if (this.#currentScene) {
+      this.frameTimeSamples.push(frameTime);
+      if (this.frameTimeSamples.length > 20) {
+        this.frameTimeSamples.shift();
+      }
+      const averageFrameTime =
+        this.frameTimeSamples.reduce((a, b) => a + b, 0) /
+        this.frameTimeSamples.length;
+      const fps = Math.round(1000 / averageFrameTime);
+
+      if (!this.#currentScene) {
+        this.loop();
+        return;
+      }
+
+      this.#currentScene?.draw(this.context, frameTime);
+      this.#particles.draw(this.context, frameTime);
+
+      while (frameTime > 0) {
+        const deltaTime = Math.min(frameTime, (1 / 60) * 1000);
+
         this.#pinput.update();
         this.#animator.update(deltaTime);
         this.#particles.update(deltaTime);
-        this.#currentScene.update(deltaTime);
-        this.#currentScene?.draw(this.context, deltaTime);
-        this.#particles.draw(this.context, deltaTime);
-        // Sort debug draw requests to the end
-        const debugDraws = this.#deferDrawRequests.filter(
-          (req) => req.isDebugDraw
-        );
-        const normalDraws = this.#deferDrawRequests.filter(
-          (req) => !req.isDebugDraw
-        );
-        for (const drawRequest of [...normalDraws, ...debugDraws]) {
-          drawRequest.callback();
-        }
-        this.#deferDrawRequests = [];
+        this.#currentScene?.update(deltaTime);
+
+        frameTime -= deltaTime;
+        this.timeSinceStart += deltaTime;
       }
+
+      drawDebugTextOverlay(
+        fps.toString() + " FPS",
+        this.camera.centerX - 22,
+        10
+      );
+
+      // Sort debug draw requests to the end
+      const debugDraws = this.#deferDrawRequests.filter(
+        (req) => req.isDebugDraw
+      );
+      const normalDraws = this.#deferDrawRequests.filter(
+        (req) => !req.isDebugDraw
+      );
+      for (const drawRequest of [...normalDraws, ...debugDraws]) {
+        drawRequest.callback();
+      }
+      this.#deferDrawRequests = [];
+
       this.loop();
     });
   }
@@ -185,29 +206,6 @@ export class Game {
     this.#deferDrawRequests.push({
       callback: drawFunction,
       isDebugDraw: isDebugDraw,
-    });
-  }
-
-  private async measureIdealRefreshRate() {
-    return new Promise<number>((resolve) => {
-      // Request a couple of animation frames and measure the time between them
-      let frameTimes: number[] = [];
-      let lastTime: number | null = null;
-      const measureFrame = (time: number) => {
-        if (lastTime !== null) {
-          frameTimes.push(time - lastTime);
-        }
-        lastTime = time;
-        if (frameTimes.length < 3) {
-          requestAnimationFrame(measureFrame);
-        } else {
-          const averageFrameTime =
-            frameTimes.reduce((a, b) => a + b, 0) / frameTimes.length;
-          const idealRefreshRate = 1000 / averageFrameTime;
-          resolve(idealRefreshRate);
-        }
-      };
-      requestAnimationFrame(measureFrame);
     });
   }
 }

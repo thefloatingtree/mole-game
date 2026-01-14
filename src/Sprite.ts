@@ -74,7 +74,6 @@ export class Sprite {
       return;
     }
 
-    ctx.imageSmoothingEnabled = false;
     ctx.drawImage(
       this.spriteImage,
       frameData.frame.x,
