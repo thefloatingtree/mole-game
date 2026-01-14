@@ -2,7 +2,7 @@ import { Game } from "../../Game";
 import type { IScene } from "../../IScene";
 import { Sprite } from "../../Sprite";
 import { drawText } from "../../util/drawText";
-import { MineScene } from "../mine-scene/MineScene";
+import { MainMenuScene } from "../main-menu-scene/MainMenuScene";
 
 export class WinScene implements IScene {
   public transitionsSprite: Sprite | null = null;
@@ -23,7 +23,7 @@ export class WinScene implements IScene {
           volume: 0.5,
         }).play();
       }, 1);
-      Game.instance.switchScene(new MineScene());
+      Game.instance.switchScene(new MainMenuScene());
     }
   }
 
@@ -40,7 +40,7 @@ export class WinScene implements IScene {
     drawText(
       context,
       Game.instance.defaultFontSprite,
-      "Enter to restart",
+      "Enter to return to main menu",
       Game.instance.camera.centerX,
       Game.instance.camera.height - 32,
       true
