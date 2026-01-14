@@ -186,15 +186,22 @@ export class MineScenePlayer extends Entity {
   }
 
   mineSelectedBlock(): void {
-    if (Game.instance.input.isReleased("e") || this.isMoving) {
-      if (this.miningTimer) {
-        clearInterval(this.miningTimer);
-        this.miningTimer = null;
+    const shouldStopMining =
+      Game.instance.input.isReleased("e") ||
+      this.isMoving ||
+      this.isDead ||
+      this.isAirborne ||
+      this.isDestroyed;
 
-        for (const block of this.scene.blockEntities) {
-          block.isBeingMined = false;
-        }
+    if (shouldStopMining) {
+      if (this.miningTimer) clearInterval(this.miningTimer);
+      this.miningTimer = null;
+
+      for (const block of this.scene.blockEntities) {
+        block.isBeingMined = false;
       }
+
+      return;
     }
 
     if (!Game.instance.input.isDown("e")) return;
@@ -273,9 +280,9 @@ export class MineScenePlayer extends Entity {
       this.mineDirection = "horizontal";
     }
 
-    
     const getGravity = () => {
-      const isPeakOfJump = this.isAirborne && this.velocity.y < 0.01 && this.velocity.y > -0.01;
+      const isPeakOfJump =
+        this.isAirborne && this.velocity.y < 0.01 && this.velocity.y > -0.01;
       if (!Game.instance.input.isDown("spacebar") && this.isAirborne) {
         return this.gravityWhileNotHoldingJump;
       }
@@ -283,7 +290,7 @@ export class MineScenePlayer extends Entity {
         return this.gravityAtPeakOfJump;
       }
       return this.gravity;
-    }
+    };
 
     this.velocity.y += getGravity() * deltaTime;
     this.position.y += this.velocity.y * deltaTime;
