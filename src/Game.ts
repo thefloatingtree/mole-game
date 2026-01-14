@@ -7,7 +7,7 @@ import { State } from "./State";
 import { Pinput } from "./util/Pinput";
 
 export class Game {
-  public static readonly drawDebugInfo = false;
+  public static readonly drawDebugInfo = true;
 
   static #instance: Game | null = null;
 

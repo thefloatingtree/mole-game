@@ -83,7 +83,7 @@ export class MineScenePlayer extends Entity {
 
     if (this.mineDirection === "up") {
       return {
-        x: this.position.x + 8 + this.isFacing.x * 3,
+        x: this.position.x + 7 + this.isFacing.x * 3,
         y: this.position.y - 24,
         width: 1,
         height: 16,
